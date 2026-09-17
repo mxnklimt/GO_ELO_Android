@@ -26,7 +26,7 @@ fun nearestPointIndex(x: Float, width: Float, count: Int): Int? {
 fun EloChart(points: List<SeriesPoint>, modifier: Modifier = Modifier) {
     var selected by remember(points) { mutableStateOf(points.lastIndex.takeIf { it >= 0 }) }
     Column {
-    Canvas(modifier.pointerInput(points) { detectTapGestures { offset -> selected = nearestPointIndex(offset.x, size.width, points.size) } }) {
+    Canvas(modifier.pointerInput(points) { detectTapGestures { offset -> selected = nearestPointIndex(offset.x, size.width.toFloat(), points.size) } }) {
         if (points.isEmpty()) return@Canvas
         val values = points.map { it.elo }
         val min = values.minOrNull() ?: 0.0

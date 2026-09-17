@@ -25,7 +25,7 @@ class MatchService(private val store: StateStore) {
             val existing = state.matches.firstOrNull { it.id == id }
             if (existing != null) {
                 require(existing.sameRequest(input, outcome, at, zoneId)) { "同一记录 ID 的内容不一致" }
-                state
+                return state
             } else {
                 val currentProfile = requireNotNull(state.profile) { "请先创建档案" }
                 val nextOrder = (state.matches.maxOfOrNull { it.order } ?: 0L) + 1L
@@ -34,7 +34,7 @@ class MatchService(private val store: StateStore) {
                     id, nextOrder, MatchKind.NATIVE, at, zoneId, outcome, input, opponentElo(input),
                     beforeElo, 0.0, beforeElo, "elo-v1",
                 )
-                rehydrated(state.copy(profile = currentProfile.copy(lastOpponentRank = input.rank), matches = state.matches + seed))
+                return rehydrated(state.copy(profile = currentProfile.copy(lastOpponentRank = input.rank), matches = state.matches + seed))
             }
         }
         return try {

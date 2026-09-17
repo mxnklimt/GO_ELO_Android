@@ -26,7 +26,7 @@ class BackupCodecTest {
             eloAfter = 1987.5, ruleVersion = "legacy-fixed-v1",
             legacy = LegacyOrigin("a".repeat(64), 7, 2, "甲", "乙", 1, 12.5, "GB18030"),
         )
-        val original = BackupEnvelope(1000L, "0.1.0", state = AppState(Profile(name = "棋手", initialElo = 2000.0), matches = listOf(legacy)))
+        val original = BackupEnvelope(exportedAtEpochMs = 1000L, appVersion = "0.1.0", state = AppState(Profile(name = "棋手", initialElo = 2000.0), matches = listOf(legacy)))
         assertEquals(original, BackupCodec().decode(BackupCodec().encode(original)))
     }
 
@@ -50,14 +50,14 @@ class BackupCodecTest {
     }
 
     @Test fun truncatedArchiveIsRejected() {
-        val bytes = BackupCodec().encode(BackupEnvelope(1L, "1", AppState(null, emptyList())))
+        val bytes = BackupCodec().encode(BackupEnvelope(exportedAtEpochMs = 1L, appVersion = "1", state = AppState(null, emptyList())))
         assertTrue(runCatching { BackupCodec().decode(bytes.copyOf(bytes.size - 1)) }.isFailure)
     }
 
     @Test fun semanticMatchErrorsIdentifyIndexedField() {
         val invalid = legacy("a", 1).copy(ruleVersion = "not-a-rule")
         val error = runCatching {
-            BackupCodec().encode(BackupEnvelope(1L, "1", AppState(Profile(name = "棋手", initialElo = 2000.0), listOf(invalid))))
+            BackupCodec().encode(BackupEnvelope(exportedAtEpochMs = 1L, appVersion = "1", state = AppState(Profile(name = "棋手", initialElo = 2000.0), listOf(invalid))))
         }.exceptionOrNull()
         assertTrue(error?.message.orEmpty().contains("matches[0].ruleVersion"))
     }
@@ -65,14 +65,14 @@ class BackupCodecTest {
     @Test fun duplicateIdsAndLegacyAfterNativeAreRejected() {
         val profile = Profile(name = "棋手", initialElo = 2000.0)
         assertTrue(runCatching {
-            BackupCodec().encode(BackupEnvelope(1L, "1", AppState(profile, listOf(legacy("same", 1), legacy("same", 2)))))
+            BackupCodec().encode(BackupEnvelope(exportedAtEpochMs = 1L, appVersion = "1", state = AppState(profile, listOf(legacy("same", 1), legacy("same", 2)))))
         }.exceptionOrNull()?.message.orEmpty().contains("matches[1].id"))
 
         val score = scoreChange(2000.0, 2000.0, Outcome.WIN)
         val native = Match("native", 1, MatchKind.NATIVE, 1L, "UTC", Outcome.WIN, RecordInput(6, 0, 0),
             2000.0, score.before, score.delta, score.after, "elo-v1")
         val error = runCatching {
-            BackupCodec().encode(BackupEnvelope(1L, "1", AppState(profile, listOf(native, legacy("legacy", 2)))))
+            BackupCodec().encode(BackupEnvelope(exportedAtEpochMs = 1L, appVersion = "1", state = AppState(profile, listOf(native, legacy("legacy", 2)))))
         }.exceptionOrNull()
         assertTrue(error?.message.orEmpty().contains("旧历史不能排在"))
     }

@@ -45,6 +45,7 @@ class AppViewModel(
 
     fun createProfile(name: String, initialElo: Double) = mutate {
         profiles.create(name, initialElo)
+        null
     }
 
     fun selectTab(tab: AppTab) { mutableUi.value = mutableUi.value.copy(tab = tab) }

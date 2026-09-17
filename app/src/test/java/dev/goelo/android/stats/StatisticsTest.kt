@@ -18,10 +18,10 @@ class StatisticsTest {
     @Test fun rangeUsesNewestGamesAndSeriesHasStart() {
         val s = state(*Array(21) { if (it == 0) Outcome.LOSS else Outcome.WIN })
         assertEquals(20, summarize(s, HistoryRange.LAST20).games)
-        assertEquals(21, series(s, HistoryRange.ALL).size); assertNull(series(s, HistoryRange.ALL).first().matchId)
+        assertEquals(22, series(s, HistoryRange.ALL).size); assertNull(series(s, HistoryRange.ALL).first().matchId)
     }
     @Test fun unknownMonthIsExcludedAndRankGroupsNativeOnly() {
-        val ms = state(Outcome.WIN).matches + Match("old", 2, MatchKind.LEGACY, 1000, "UTC", Outcome.LOSS, null, null, 2000.0, 0.0, 2000.0, "legacy")
+        val ms = state(Outcome.WIN).matches + Match("old", 2, MatchKind.LEGACY, null, null, Outcome.LOSS, null, null, 2000.0, 0.0, 2000.0, "legacy")
         assertEquals(1, byMonth(ms).single().games); assertEquals(1, byRank(ms).single().wins)
     }
 }
