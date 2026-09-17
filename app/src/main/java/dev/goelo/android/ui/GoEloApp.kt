@@ -16,6 +16,7 @@ import dev.goelo.android.ui.history.HistoryScreen
 import dev.goelo.android.ui.onboarding.OnboardingScreen
 import dev.goelo.android.ui.record.RecordSheet
 import dev.goelo.android.ui.settings.SettingsScreen
+import dev.goelo.android.ui.backup.BackupSheet
 
 @Composable
 fun GoEloApp(viewModel: AppViewModel) {
@@ -34,7 +35,7 @@ fun GoEloApp(viewModel: AppViewModel) {
                     range = state.range,
                     onRange = viewModel::selectRange,
                     onRecord = viewModel::openRecord,
-                    onBackup = {},
+                    onBackup = viewModel::openBackup,
                     undoAvailable = state.undo != null,
                     onUndo = viewModel::undoLastRecord,
                 )
@@ -55,6 +56,7 @@ fun GoEloApp(viewModel: AppViewModel) {
                     onRename = viewModel::renameProfile,
                     onInitialElo = viewModel::changeInitialElo,
                     onTarget = viewModel::setTarget,
+                    onBackup = viewModel::openBackup,
                 )
             }
         }
@@ -84,5 +86,10 @@ fun GoEloApp(viewModel: AppViewModel) {
         onText = viewModel::setRecordText,
         onSubmit = viewModel::submit,
         onDismiss = viewModel::closeRecord,
+    )
+    if (state.backupOpen) BackupSheet(
+        busy = state.busy,
+        onSave = {}, onShare = {}, onChooseRestore = {}, onSaveCancelled = {}, onSaveDestination = {},
+        onDismiss = viewModel::closeBackup,
     )
 }

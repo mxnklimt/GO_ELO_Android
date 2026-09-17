@@ -41,6 +41,8 @@ class AppViewModel(
     }
 
     fun selectTab(tab: AppTab) { mutableUi.value = mutableUi.value.copy(tab = tab) }
+    fun openBackup() { mutableUi.value = mutableUi.value.copy(backupOpen = true, error = null) }
+    fun closeBackup() { mutableUi.value = mutableUi.value.copy(backupOpen = false) }
     fun selectRange(range: dev.goelo.android.stats.HistoryRange) { mutableUi.value = mutableUi.value.copy(range = range) }
 
     fun openRecord() {

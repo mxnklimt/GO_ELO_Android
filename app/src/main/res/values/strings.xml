@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">GO ELO</string>
+    <string name="backup_share_chooser">分享备份</string>
 </resources>

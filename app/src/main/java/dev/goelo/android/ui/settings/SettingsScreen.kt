@@ -21,6 +21,7 @@ fun SettingsScreen(
     onRename: (String, Long) -> Unit,
     onInitialElo: (Double, Long) -> Unit,
     onTarget: (Double?, Long) -> Unit,
+    onBackup: () -> Unit = {},
 ) {
     val profile = requireNotNull(state.profile)
     val current = state.matches.maxByOrNull { it.order }?.eloAfter ?: profile.initialElo
@@ -34,6 +35,7 @@ fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         Text("我的", style = MaterialTheme.typography.titleLarge)
+        OutlinedButton(onClick = onBackup, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text("备份与恢复") }
         Card { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("个人档案", style = MaterialTheme.typography.titleMedium)
             OutlinedTextField(name, { name = it }, label = { Text("名称") }, singleLine = true, modifier = Modifier.fillMaxWidth())

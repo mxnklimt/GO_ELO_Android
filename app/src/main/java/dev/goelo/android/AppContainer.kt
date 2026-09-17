@@ -3,6 +3,7 @@ package dev.goelo.android
 import android.content.Context
 import androidx.room.Room
 import dev.goelo.android.backup.BackupCodec
+import dev.goelo.android.backup.AndroidDocumentGateway
 import dev.goelo.android.backup.FileSnapshotStore
 import dev.goelo.android.backup.RestoreService
 import dev.goelo.android.data.GoEloDatabase
@@ -20,4 +21,5 @@ class AppContainer(context: Context) {
     val backupCodec = BackupCodec()
     val snapshotStore = FileSnapshotStore(File(context.noBackupFilesDir, "recovery"), Clock.systemUTC())
     val restoreService = RestoreService(stateStore, snapshotStore, backupCodec, Clock.systemUTC(), "0.1.0")
+    val documentGateway = AndroidDocumentGateway(context)
 }

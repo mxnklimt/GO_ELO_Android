@@ -16,4 +16,5 @@ data class AppUiState(
     val busy: Boolean = false,
     val error: String? = null,
     val undo: UndoToken? = null,
+    val backupOpen: Boolean = false,
 )
