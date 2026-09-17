@@ -21,7 +21,7 @@ class ProfileServiceTest {
             val service = ProfileService(store)
             service.create("棋手", 2200.0)
             val target = service.setTarget(2300.0, store.read().revision)
-            assertEquals(2200.0, target.state.profile!!.targetStartElo, 0.0)
+            assertEquals(2200.0, requireNotNull(target.state.profile!!.targetStartElo), 0.0)
             val cleared = service.setTarget(null, target.revision)
             assertNull(cleared.state.profile!!.targetElo)
             assertNull(cleared.state.profile!!.targetStartElo)

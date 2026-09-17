@@ -6,6 +6,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performScrollTo
 import dev.goelo.android.ui.onboarding.OnboardingScreen
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -19,7 +20,7 @@ class OnboardingTest {
         compose.setContent { MaterialTheme { OnboardingScreen { name, elo -> received = name to elo } } }
         compose.onNodeWithTag("profile-name").performTextInput("  小林  ")
         compose.onNodeWithText("7段").performClick()
-        compose.onNodeWithText("开始记录").performClick()
+        compose.onNodeWithText("开始记录").performScrollTo().performClick()
         compose.runOnIdle { assertEquals("小林" to 2200.0, received) }
     }
 }

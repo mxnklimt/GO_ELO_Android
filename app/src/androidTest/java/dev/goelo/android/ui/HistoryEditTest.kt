@@ -2,7 +2,7 @@ package dev.goelo.android.ui
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertExists
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -40,19 +40,20 @@ class HistoryEditTest {
     }
 
     @Test fun emptyHistoryAndLegacyReadOnlyExplanationAreVisible() {
+        val rows = mutableStateOf(emptyList<Match>())
         compose.setContent { BlackGoldTheme {
-            HistoryScreen(emptyList(), 1L, false, null, { _, _, _, _ -> }, { _, _ -> })
+            HistoryScreen(rows.value, 1L, false, null, { _, _, _, _ -> }, { _, _ -> })
         } }
         compose.onNodeWithText("没有符合条件的对局").assertIsDisplayed()
+        compose.onNodeWithText("筛选对局").performClick()
         compose.onNodeWithText("1 段").assertExists()
         compose.onNodeWithText("9 段").assertExists()
 
         val legacy = Match("old", 1L, MatchKind.LEGACY, null, null, Outcome.LOSS, null, null, 2000.0, -10.0, 1990.0, "legacy-fixed-v1")
-        compose.setContent { BlackGoldTheme {
-            HistoryScreen(listOf(legacy), 1L, false, null, { _, _, _, _ -> }, { _, _ -> })
-        } }
+        compose.onNodeWithText("收起筛选").performClick()
+        compose.runOnIdle { rows.value = listOf(legacy) }
         compose.onNodeWithText("只读").performClick()
-        compose.onNodeWithText("旧版导入记录按原始变动保存，不能编辑或删除。如需调整，请在“我的”页面重新导入旧文件。").assertIsDisplayed()
+        compose.onNodeWithText("旧版记录保留原始结果，没有可靠日期，不提供逐盘修改。", substring = true).assertIsDisplayed()
     }
 
     @Test fun deleteConfirmationIdentifiesNativeMatchAndAffectedCount() {

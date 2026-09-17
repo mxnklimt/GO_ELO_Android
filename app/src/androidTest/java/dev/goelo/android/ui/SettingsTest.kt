@@ -4,6 +4,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import dev.goelo.android.model.AppState
 import dev.goelo.android.model.Match
 import dev.goelo.android.model.MatchKind
@@ -22,7 +23,7 @@ class SettingsTest {
         compose.setContent { BlackGoldTheme {
             SettingsScreen(state, 1L, false, null, { _, _ -> }, { _, _ -> }, { _, _ -> })
         } }
-        compose.onNodeWithText("恢复自动目标").assertIsDisplayed()
+        compose.onNodeWithText("恢复自动目标").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("设置目标").assertIsNotEnabled()
     }
 
@@ -32,8 +33,8 @@ class SettingsTest {
         compose.setContent { BlackGoldTheme {
             SettingsScreen(AppState(profile, listOf(legacy)), 1L, false, null, { _, _ -> }, { _, _ -> }, { _, _ -> })
         } }
-        compose.onNodeWithText("目标已达成").assertIsDisplayed()
-        compose.onNodeWithText("重新计算").assertIsNotEnabled()
-        compose.onNodeWithText("包含旧历史，请重新导入旧文件以调整衔接分。").assertIsDisplayed()
+        compose.onNodeWithText("目标已达成").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("重新计算").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithText("旧历史的起点由原始分差和导入时的当前分推导，保持固定。").performScrollTo().assertIsDisplayed()
     }
 }

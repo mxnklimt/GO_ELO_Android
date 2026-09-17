@@ -17,19 +17,41 @@ import dev.goelo.android.ui.onboarding.OnboardingScreen
 import dev.goelo.android.ui.record.RecordSheet
 import dev.goelo.android.ui.settings.SettingsScreen
 import dev.goelo.android.ui.backup.BackupSheet
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.unit.dp
+import dev.goelo.android.ui.components.*
+import dev.goelo.android.ui.theme.*
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 
 @Composable
 fun GoEloApp(viewModel: AppViewModel, onSave: () -> Unit = {}, onShare: () -> Unit = {}, onChooseRestore: () -> Unit = {}, onSaveDestination: (android.net.Uri) -> Unit = {}) {
     val state by viewModel.ui.collectAsState()
     val snapshot = state.snapshot
     val profile = snapshot?.state?.profile
-    if (profile == null || snapshot == null) {
-        OnboardingScreen(onCreate = viewModel::createProfile)
+    if (snapshot == null) {
+        Surface(Modifier.fillMaxSize(), color = Ink) {
+            Box(Modifier.safeDrawingPadding(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                CircularProgressIndicator(color = Gold)
+            }
+        }
         return
     }
-    Column(Modifier.fillMaxSize()) {
+    if (profile == null) {
+        Surface(Modifier.fillMaxSize(), color = Ink) {
+            Box(Modifier.safeDrawingPadding()) { OnboardingScreen(onCreate = viewModel::createProfile) }
+        }
+        return
+    }
+    Surface(Modifier.fillMaxSize(), color = Ink) {
+    Column(Modifier.fillMaxSize().safeDrawingPadding()
+        .background(Brush.verticalGradient(listOf(androidx.compose.ui.graphics.Color(0xFF151C16), Ink, Ink)))) {
         androidx.compose.foundation.layout.Box(Modifier.weight(1f)) {
-            when (state.tab) {
+            Crossfade(targetState = state.tab, animationSpec = tween(180), label = "page-transition") { tab ->
+            when (tab) {
                 AppTab.GROWTH -> GrowthScreen(
                     state = snapshot.state,
                     range = state.range,
@@ -59,8 +81,21 @@ fun GoEloApp(viewModel: AppViewModel, onSave: () -> Unit = {}, onShare: () -> Un
                     onBackup = viewModel::openBackup,
                 )
             }
+            }
         }
-        NavigationBar {
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = .6f))
+        Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (state.undo != null) TextButton(onClick = viewModel::undoLastRecord, enabled = !state.busy) { Text("撤销") }
+            Button(onClick = viewModel::openRecord, enabled = !state.busy,
+                modifier = Modifier.weight(1f).heightIn(min = 50.dp), shape = MaterialTheme.shapes.medium) {
+                AppMark(Mark.PLUS, color = MaterialTheme.colorScheme.onPrimary)
+                Spacer(Modifier.width(8.dp))
+                Text("记一盘")
+            }
+        }
+        NavigationBar(containerColor = Ink, tonalElevation = 0.dp, windowInsets = WindowInsets(0,0,0,0)) {
             listOf(
                 AppTab.GROWTH to "成长",
                 AppTab.ANALYSIS to "分析",
@@ -70,11 +105,22 @@ fun GoEloApp(viewModel: AppViewModel, onSave: () -> Unit = {}, onShare: () -> Un
                 NavigationBarItem(
                     selected = state.tab == tab,
                     onClick = { viewModel.selectTab(tab) },
-                    icon = {},
+                    icon = { AppMark(when(tab) {
+                        AppTab.GROWTH -> Mark.GROWTH
+                        AppTab.ANALYSIS -> Mark.ANALYSIS
+                        AppTab.HISTORY -> Mark.HISTORY
+                        AppTab.SETTINGS -> Mark.PROFILE
+                    }, color = if(state.tab == tab) Gold else MaterialTheme.colorScheme.onSurfaceVariant) },
                     label = { Text(label) },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Gold, selectedTextColor = Gold,
+                        indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    ),
                 )
             }
         }
+    }
     }
     if (state.recordOpen) RecordSheet(
         rank = state.rank,

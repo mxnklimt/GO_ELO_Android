@@ -93,7 +93,7 @@ class RestoreServiceTest {
         try {
             ProfileService(store).create("原档案", 2000.0)
             val codec = BackupCodec()
-            val bytes = codec.encode(BackupEnvelope(1L, "0.1.0", AppState(Profile(name = "恢复档案", initialElo = 2200.0), emptyList())))
+            val bytes = codec.encode(BackupEnvelope(exportedAtEpochMs = 1L, appVersion = "0.1.0", state = AppState(Profile(name = "恢复档案", initialElo = 2200.0), emptyList())))
             val restore = RestoreService(store, snapshots, codec, Clock.fixed(Instant.EPOCH, ZoneOffset.UTC), "0.1.0")
             restore.apply(restore.prepare(bytes, "same.goelo"))
             restore.apply(restore.prepare(bytes, "same.goelo"))
