@@ -42,5 +42,6 @@ class HistoryFilterTest {
 
     @Test fun invalidDateRangeIsRejected() {
         assertTrue(runCatching { filterMatches(emptyList(), HistoryFilter(fromDate = "2026-09-18", toDate = "2026-09-17")) }.isFailure)
+        assertTrue(runCatching { filterMatches(emptyList(), HistoryFilter(fromDate = "not-a-date")) }.isFailure)
     }
 }

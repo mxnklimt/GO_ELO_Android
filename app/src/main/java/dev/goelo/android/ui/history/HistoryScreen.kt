@@ -1,6 +1,8 @@
 package dev.goelo.android.ui.history
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
@@ -43,9 +45,9 @@ fun HistoryScreen(
     val visible = result.getOrDefault(emptyList())
     Column(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
         Text("历史", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(vertical = 16.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
             FilterChip(rank == null, { rank = null }, label = { Text("全部段位") })
-            (6..8).forEach { value -> FilterChip(rank == value, { rank = value }, label = { Text("$value 段") }) }
+            (1..9).forEach { value -> FilterChip(rank == value, { rank = value }, label = { Text("$value 段") }) }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
             FilterChip(outcome == null, { outcome = null }, label = { Text("全部结果") })
@@ -92,7 +94,7 @@ fun HistoryScreen(
     )
     deleting?.let { match -> AlertDialog(
         onDismissRequest = { if (!busy) deleting = null }, title = { Text("删除对局？") },
-        text = { Text("将删除这条记录，并重算后续 ${matches.count { it.order > match.order }} 盘。") },
+        text = { Text("将删除：${deleteDetail(match)}\n\n并重算后续 ${matches.count { it.order > match.order }} 盘。") },
         confirmButton = { Button(onClick = { onDelete(match.id, selectedRevision); deleting = null }, enabled = !busy) { Text("删除") } },
         dismissButton = { TextButton(onClick = { deleting = null }, enabled = !busy) { Text("取消") } },
     ) }
@@ -100,12 +102,20 @@ fun HistoryScreen(
 
 @Composable
 private fun MatchRow(match: Match, onClick: () -> Unit) {
-    val date = match.playedAtEpochMs?.let { time -> match.playedZoneId?.let { zone ->
-        runCatching { DateTimeFormatter.ISO_LOCAL_DATE.format(Instant.ofEpochMilli(time).atZone(ZoneId.of(zone))) }.getOrNull()
-    } } ?: "旧历史/日期未知"
+    val date = matchDateText(match)
     Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) { ListItem(
         headlineContent = { Text("${if (match.outcome == Outcome.WIN) "胜" else "负"} · ${match.input?.rank?.let { "$it 段" } ?: "旧历史"}") },
         supportingContent = { Text("$date · ${String.format(Locale.US, "%+.1f", match.delta)}") },
         trailingContent = { Text(if (match.kind == MatchKind.NATIVE) "更正" else "只读") },
     ) }
+}
+
+private fun matchDateText(match: Match): String = match.playedAtEpochMs?.let { time -> match.playedZoneId?.let { zone ->
+    runCatching { DateTimeFormatter.ISO_LOCAL_DATE.format(Instant.ofEpochMilli(time).atZone(ZoneId.of(zone))) }.getOrNull()
+} } ?: "旧历史/日期未知"
+
+private fun deleteDetail(match: Match): String {
+    val result = if (match.outcome == Outcome.WIN) "胜" else "负"
+    val opponent = match.input?.let { "${it.rank} 段 · 战绩 ${it.wins}-${it.losses}" } ?: "旧历史/对手信息未知"
+    return "$result · $opponent · ${matchDateText(match)} · ${String.format(Locale.US, "%+.1f", match.delta)}"
 }

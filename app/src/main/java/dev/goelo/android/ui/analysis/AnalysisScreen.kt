@@ -21,7 +21,7 @@ fun AnalysisScreen(state: AppState, range: HistoryRange, onRange: (HistoryRange)
     val ranks = byRank(selected)
     val months = byMonth(state.matches)
     val unknownRank = selected.count { it.input == null }
-    val unknownDate = state.matches.count { it.playedAtEpochMs == null || it.playedZoneId == null }
+    val unknownDate = selected.count { it.playedAtEpochMs == null || it.playedZoneId == null }
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -33,7 +33,7 @@ fun AnalysisScreen(state: AppState, range: HistoryRange, onRange: (HistoryRange)
             Text("样本 ${summary.games} 盘 · 胜 ${summary.wins} · 胜率 ${summary.winRate?.let { String.format(Locale.US, "%.0f%%", it * 100) } ?: "—"}")
             Text("净变化 ${String.format(Locale.US, "%+.1f", summary.netDelta)} · 当前连胜 ${summary.currentStreak} · 最长连胜 ${summary.longestStreak}")
             Text("参考段位未知/旧历史排除 ${unknownRank} 盘", style = MaterialTheme.typography.bodySmall)
-            Text("日期未知/旧历史排除 ${unknownDate} 盘", style = MaterialTheme.typography.bodySmall)
+            Text("本区间日期未知/旧历史 ${unknownDate} 盘；月度统计单列全部有日期对局", style = MaterialTheme.typography.bodySmall)
         } }
         Text("按对手参考段位", style = MaterialTheme.typography.titleMedium)
         if (ranks.isEmpty()) Text("暂无可按段位分析的新记录")
