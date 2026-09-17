@@ -1,6 +1,8 @@
 package dev.goelo.android.ui.record
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -28,8 +30,8 @@ fun RecordSheet(rank: Int, text: String, selfElo: Double, busy: Boolean, error: 
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("对手段位")
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { (1..9).forEach { value ->
-                    FilterChip(selected = value == rank, onClick = { onRank(value) }, enabled = !busy, label = { Text(value.toString()) })
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) { (1..9).forEach { value ->
+                    FilterChip(selected = value == rank, onClick = { onRank(value) }, enabled = !busy, label = { Text(value.toString()) }, modifier = Modifier.heightIn(min = 48.dp))
                 } }
                 OutlinedTextField(text, onText, label = { Text("对手最近战绩，如 11-8") }, singleLine = true,
                     modifier = Modifier.fillMaxWidth().semantics { testTag = "opponent-record" })

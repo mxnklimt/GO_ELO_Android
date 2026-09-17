@@ -15,7 +15,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.time.Clock
-import java.time.ZoneId
 
 class AppViewModel(
     private val store: StateStore,
@@ -26,7 +25,7 @@ class AppViewModel(
 ) : ViewModel() {
     private val mutableUi = MutableStateFlow(AppUiState())
     val ui: StateFlow<AppUiState> = mutableUi.asStateFlow()
-    private var pendingRequestId: String? = null
+    private var pendingRequest: PendingRequest? = null
 
     init {
         viewModelScope.launch {
@@ -45,7 +44,7 @@ class AppViewModel(
 
     fun openRecord() {
         val rank = mutableUi.value.snapshot?.state?.profile?.lastOpponentRank ?: 7
-        pendingRequestId = null
+        pendingRequest = null
         mutableUi.value = mutableUi.value.copy(recordOpen = true, rank = rank, recordText = "", error = null)
     }
 
@@ -54,12 +53,12 @@ class AppViewModel(
     }
 
     fun setRank(rank: Int) {
-        pendingRequestId = null
+        pendingRequest = null
         mutableUi.value = mutableUi.value.copy(rank = rank.coerceIn(1, 9), error = null)
     }
 
     fun setRecordText(text: String) {
-        pendingRequestId = null
+        pendingRequest = null
         mutableUi.value = mutableUi.value.copy(recordText = text, error = null)
     }
 
@@ -69,13 +68,13 @@ class AppViewModel(
             mutableUi.value = state.copy(error = "请输入不超过 20 盘的战绩，例如 11-8")
             return
         }
-        val requestId = pendingRequestId ?: newId().also { pendingRequestId = it }
+        val request = pendingRequest?.takeIf { it.input == input && it.outcome == outcome }
+            ?: PendingRequest(newId(), input, outcome, clock.instant().toEpochMilli(), clock.zone.id).also { pendingRequest = it }
         mutate(onSuccess = {
-            pendingRequestId = null
+            pendingRequest = null
             mutableUi.value = mutableUi.value.copy(recordOpen = false, recordText = "", undo = it, error = null)
         }) {
-            val instant = clock.instant()
-            matches.record(requestId, input, outcome, instant.toEpochMilli(), ZoneId.systemDefault().id).undo
+            matches.record(request.id, request.input, request.outcome, request.atEpochMs, request.zoneId).undo
         }
     }
 
@@ -99,4 +98,12 @@ class AppViewModel(
             }
         }
     }
+
+    private data class PendingRequest(
+        val id: String,
+        val input: dev.goelo.android.model.RecordInput,
+        val outcome: Outcome,
+        val atEpochMs: Long,
+        val zoneId: String,
+    )
 }

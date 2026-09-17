@@ -32,7 +32,7 @@ private class AppViewModelFactory(private val container: AppContainer) : ViewMod
             store = container.stateStore,
             matches = container.matchService,
             profiles = container.profileService,
-            clock = Clock.systemUTC(),
+            clock = Clock.systemDefaultZone(),
             newId = { UUID.randomUUID().toString() },
         ) as T
     }
