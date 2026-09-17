@@ -18,9 +18,11 @@ import androidx.compose.runtime.*
 import android.content.Intent
 import android.content.ClipData
 import android.net.Uri
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.launch
+import androidx.lifecycle.lifecycleScope
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     private val appViewModel: AppViewModel by viewModels { AppViewModelFactory((application as GoEloApplication).container) }
@@ -34,9 +36,9 @@ class MainActivity : ComponentActivity() {
                 }
             }
             val open = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-                if (uri != null) lifecycleScope.launch { try { val bytes=(application as GoEloApplication).container.documentGateway.read(uri); appViewModel.previewRestore(bytes, "恢复文件") } catch (_: Throwable) {} }
+                if (uri != null) lifecycleScope.launch { try { val bytes=(application as GoEloApplication).container.documentGateway.read(uri); val name=contentResolver.query(uri, arrayOf("_display_name"), null, null, null)?.use { if (it.moveToFirst()) it.getString(0) else null } ?: "恢复文件"; appViewModel.previewRestore(bytes, name) } catch (e: Throwable) { } }
             }
-            BlackGoldTheme { GoEloApp(appViewModel, onSave = { appViewModel.prepareBackup(); save.launch("GO-ELO-backup.goelo.json") }, onChooseRestore = { open.launch(arrayOf("application/json", "*/*")) }, onShare = { appViewModel.takePreparedBackup()?.let { bytes -> lifecycleScope.launch { val uri=(application as GoEloApplication).container.documentGateway.createShareUri("GO-ELO-backup.json", bytes); startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply { type="application/json"; putExtra(Intent.EXTRA_STREAM, uri); clipData=ClipData.newRawUri("GO ELO 备份", uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }, "分享备份")) } } }) }
+            BlackGoldTheme { GoEloApp(appViewModel, onSave = { appViewModel.prepareBackup { save.launch(SimpleDateFormat("'GO-ELO-'yyyyMMdd-HHmmss'.goelo.json'", Locale.US).format(Date())) } }, onChooseRestore = { open.launch(arrayOf("application/json", "*/*")) }, onShare = { appViewModel.prepareBackup { appViewModel.takePreparedBackup()?.let { bytes -> lifecycleScope.launch { val uri=(application as GoEloApplication).container.documentGateway.createShareUri(SimpleDateFormat("'GO-ELO-'yyyyMMdd-HHmmss'.goelo.json'", Locale.US).format(Date()), bytes); startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply { type="application/json"; putExtra(Intent.EXTRA_STREAM, uri); clipData=ClipData.newRawUri("GO ELO 备份", uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }, "分享备份")) } } } }) }
         }
     }
 }

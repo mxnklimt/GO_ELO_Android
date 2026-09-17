@@ -50,7 +50,7 @@ class AppViewModel(
     fun selectTab(tab: AppTab) { mutableUi.value = mutableUi.value.copy(tab = tab) }
     fun openBackup() { mutableUi.value = mutableUi.value.copy(backupOpen = true, error = null) }
     fun closeBackup() { mutableUi.value = mutableUi.value.copy(backupOpen = false) }
-    fun prepareBackup() {
+    fun prepareBackup(onReady: (() -> Unit)? = null) {
         val current = mutableUi.value.snapshot ?: return
         val c = codec ?: return
         viewModelScope.launch {
@@ -58,6 +58,7 @@ class AppViewModel(
             try {
                 exportBytes = c.encode(BackupEnvelope(exportedAtEpochMs = clock.millis(), appVersion = "0.1.0", state = current.state))
                 mutableUi.value = mutableUi.value.copy(pendingExport = true)
+                onReady?.invoke()
             } catch (e: Throwable) { mutableUi.value = mutableUi.value.copy(error = e.message ?: "备份失败") }
             finally { mutableUi.value = mutableUi.value.copy(busy = false) }
         }
