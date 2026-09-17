@@ -34,6 +34,8 @@ private class AppViewModelFactory(private val container: AppContainer) : ViewMod
             profiles = container.profileService,
             clock = Clock.systemDefaultZone(),
             newId = { UUID.randomUUID().toString() },
+            codec = container.backupCodec,
+            restoreService = container.restoreService,
         ) as T
     }
 }

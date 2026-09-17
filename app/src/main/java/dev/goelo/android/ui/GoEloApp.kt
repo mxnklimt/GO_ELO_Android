@@ -89,7 +89,8 @@ fun GoEloApp(viewModel: AppViewModel) {
     )
     if (state.backupOpen) BackupSheet(
         busy = state.busy,
-        onSave = {}, onShare = {}, onChooseRestore = {}, onSaveCancelled = {}, onSaveDestination = {},
+        onSave = viewModel::prepareBackup, onShare = {}, onChooseRestore = {}, onSaveCancelled = viewModel::clearPreparedBackup, onSaveDestination = {},
         onDismiss = viewModel::closeBackup,
     )
+    state.restorePreview?.let { dev.goelo.android.ui.backup.RestorePreviewSheet(it, state.busy, viewModel::confirmRestore, viewModel::cancelRestore) }
 }

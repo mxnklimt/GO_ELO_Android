@@ -16,6 +16,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import java.time.Clock
+import dev.goelo.android.backup.BackupCodec
+import dev.goelo.android.backup.BackupEnvelope
+import dev.goelo.android.backup.PreparedRestore
+import dev.goelo.android.backup.RestoreService
 
 class AppViewModel(
     private val store: StateStore,
@@ -23,10 +27,13 @@ class AppViewModel(
     private val profiles: ProfileService,
     private val clock: Clock,
     private val newId: () -> String,
+    private val codec: BackupCodec? = null,
+    private val restoreService: RestoreService? = null,
 ) : ViewModel() {
     private val mutableUi = MutableStateFlow(AppUiState())
     val ui: StateFlow<AppUiState> = mutableUi.asStateFlow()
     private var pendingRequest: PendingRequest? = null
+    private var exportBytes: ByteArray? = null
 
     init {
         viewModelScope.launch {
@@ -43,6 +50,40 @@ class AppViewModel(
     fun selectTab(tab: AppTab) { mutableUi.value = mutableUi.value.copy(tab = tab) }
     fun openBackup() { mutableUi.value = mutableUi.value.copy(backupOpen = true, error = null) }
     fun closeBackup() { mutableUi.value = mutableUi.value.copy(backupOpen = false) }
+    fun prepareBackup() {
+        val current = mutableUi.value.snapshot ?: return
+        val c = codec ?: return
+        viewModelScope.launch {
+            mutableUi.value = mutableUi.value.copy(busy = true, error = null)
+            try {
+                exportBytes = c.encode(BackupEnvelope(exportedAtEpochMs = clock.millis(), appVersion = "0.1.0", state = current.state))
+                mutableUi.value = mutableUi.value.copy(pendingExport = true)
+            } catch (e: Throwable) { mutableUi.value = mutableUi.value.copy(error = e.message ?: "备份失败") }
+            finally { mutableUi.value = mutableUi.value.copy(busy = false) }
+        }
+    }
+    fun takePreparedBackup(): ByteArray? = exportBytes
+    fun clearPreparedBackup() { exportBytes = null; mutableUi.value = mutableUi.value.copy(pendingExport = false) }
+    fun previewRestore(bytes: ByteArray, sourceName: String) {
+        val service = restoreService ?: return
+        viewModelScope.launch {
+            mutableUi.value = mutableUi.value.copy(busy = true, error = null)
+            try { mutableUi.value = mutableUi.value.copy(restorePreview = service.prepare(bytes, sourceName)) }
+            catch (e: Throwable) { mutableUi.value = mutableUi.value.copy(error = e.message ?: "恢复文件不可读") }
+            finally { mutableUi.value = mutableUi.value.copy(busy = false) }
+        }
+    }
+    fun cancelRestore() { mutableUi.value = mutableUi.value.copy(restorePreview = null) }
+    fun confirmRestore() {
+        val service = restoreService ?: return
+        val prepared = mutableUi.value.restorePreview ?: return
+        viewModelScope.launch {
+            mutableUi.value = mutableUi.value.copy(busy = true, error = null)
+            try { service.apply(prepared); mutableUi.value = mutableUi.value.copy(restorePreview = null, backupOpen = false) }
+            catch (e: Throwable) { mutableUi.value = mutableUi.value.copy(error = e.message ?: "恢复失败，原数据未改变") }
+            finally { mutableUi.value = mutableUi.value.copy(busy = false) }
+        }
+    }
     fun selectRange(range: dev.goelo.android.stats.HistoryRange) { mutableUi.value = mutableUi.value.copy(range = range) }
 
     fun openRecord() {

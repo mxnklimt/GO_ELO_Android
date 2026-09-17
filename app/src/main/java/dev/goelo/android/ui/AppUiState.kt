@@ -17,4 +17,6 @@ data class AppUiState(
     val error: String? = null,
     val undo: UndoToken? = null,
     val backupOpen: Boolean = false,
+    val restorePreview: dev.goelo.android.backup.PreparedRestore? = null,
+    val pendingExport: Boolean = false,
 )
