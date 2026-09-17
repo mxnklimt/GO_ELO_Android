@@ -8,6 +8,7 @@ import dev.goelo.android.data.StateStore
 import dev.goelo.android.model.Outcome
 import dev.goelo.android.rating.parseRecord
 import dev.goelo.android.data.UndoToken
+import dev.goelo.android.model.RecordInput
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -83,6 +84,31 @@ class AppViewModel(
         mutate(onSuccess = { mutableUi.value = mutableUi.value.copy(undo = null) }) { matches.undo(token); null }
     }
 
+    fun editMatch(id: String, input: RecordInput, outcome: Outcome, revision: Long) = mutate {
+        matches.edit(id, input, outcome, revision)
+        null
+    }
+
+    fun deleteMatch(id: String, revision: Long) = mutate {
+        matches.delete(id, revision)
+        null
+    }
+
+    fun renameProfile(name: String, revision: Long) = mutate {
+        profiles.rename(name, revision)
+        null
+    }
+
+    fun changeInitialElo(value: Double, revision: Long) = mutate {
+        profiles.changeInitialElo(value, revision)
+        null
+    }
+
+    fun setTarget(value: Double?, revision: Long) = mutate {
+        profiles.setTarget(value, revision)
+        null
+    }
+
     private fun mutate(onSuccess: (UndoToken?) -> Unit = {}, block: suspend () -> UndoToken?) {
         if (mutableUi.value.busy) return
         mutableUi.value = mutableUi.value.copy(busy = true, error = null, undo = null)
@@ -91,8 +117,13 @@ class AppViewModel(
                 onSuccess(block())
             } catch (error: CancellationException) {
                 throw error
-            } catch (_: Throwable) {
-                mutableUi.value = mutableUi.value.copy(error = "保存失败，记录未改变")
+            } catch (error: Throwable) {
+                val message = error.message
+                mutableUi.value = mutableUi.value.copy(error = when {
+                    message?.contains("数据已变化") == true -> "记录已更新，请重新打开"
+                    message.isNullOrBlank() -> "保存失败，记录未改变"
+                    else -> message
+                })
             } finally {
                 mutableUi.value = mutableUi.value.copy(busy = false)
             }
