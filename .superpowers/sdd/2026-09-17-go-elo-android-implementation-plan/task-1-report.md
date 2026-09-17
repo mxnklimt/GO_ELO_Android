@@ -32,3 +32,9 @@ The prescribed assemble and lint command was attempted and is blocked by missing
 ## Concerns
 
 Build, lint, merged-manifest inspection, and instrumentation remain pending until the documented toolchains are installed and Gradle 8.13 can be fetched. The launch test is intentionally the minimal Task 1 smoke test and expects the welcome labels required by the brief.
+
+## Review round 1
+
+Removed the duplicate `Theme.GoElo` declaration from `app/src/main/res/values/strings.xml`; the style remains in `styles.xml`. Updated the version catalog to the approved baseline: AGP 8.11.1, Kotlin 2.2.21, KSP 2.2.21-2.0.5, Compose BOM 2025.12.00, and Room 2.8.5.
+
+Lightweight checks passed: XML parsing for all `app/src/main/res` XML files, exactly one `Theme.GoElo` declaration, and catalog value inspection. Gradle build remains blocked by the previously documented missing toolchain and denied distribution download.
