@@ -63,7 +63,9 @@ class FileSnapshotStore(
             .mapNotNull { file -> snapshotFromFile(file)?.let { it to file } }
             .sortedWith(compareByDescending<Pair<LocalSnapshot, File>> { it.first.createdAtEpochMs }.thenByDescending { it.first.id })
             .drop(MAX_SNAPSHOTS)
-            .forEach { (_, file) -> file.delete() }
+            .forEach { (_, file) ->
+                check(file.delete()) { "无法清理过期恢复快照：${file.name}" }
+            }
     }
 
     private fun cleanInterruptedFiles() {
