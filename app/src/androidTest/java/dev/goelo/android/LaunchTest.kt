@@ -14,7 +14,7 @@ class LaunchTest {
     val compose = createAndroidComposeRule<MainActivity>()
 
     @Test
-    fun opensOfflineWelcome() {
+    fun opensProfileSetup() {
         compose.onNodeWithText("GO ELO").assertIsDisplayed()
         compose.onNodeWithText("开始记录").assertIsDisplayed()
     }
