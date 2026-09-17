@@ -8,3 +8,9 @@ local.properties
 captures/
 externalNativeBuild/
 *.iml
+.gradle/
+**/build/
+local.properties
+.local/
+*.jks
+*.keystore
