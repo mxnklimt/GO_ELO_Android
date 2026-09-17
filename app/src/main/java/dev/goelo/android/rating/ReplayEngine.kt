@@ -31,7 +31,7 @@ fun validateState(state: AppState): Result<Unit> = runCatching {
     state.matches.forEach { m ->
         require(m.id.isNotBlank() && m.eloBefore.isFinite() && m.delta.isFinite() && m.eloAfter.isFinite())
         when (m.kind) {
-            MatchKind.NATIVE -> { require(m.input != null && m.opponentElo != null && m.playedAtEpochMs != null && m.playedZoneId != null); ZoneId.of(m.playedZoneId); require(m.legacy == null); require(m.ruleVersion == "elo-v1"); opponentElo(m.input) }
+            MatchKind.NATIVE -> { require(m.input != null && m.opponentElo != null && m.opponentElo.isFinite() && m.playedAtEpochMs != null && m.playedZoneId != null); ZoneId.of(m.playedZoneId); require(m.legacy == null); require(m.ruleVersion == "elo-v1"); require(kotlin.math.abs(m.opponentElo - opponentElo(m.input)) <= 1e-7) }
             MatchKind.LEGACY -> { val l = m.legacy ?: error("缺少 legacy 来源"); require(m.input == null && m.opponentElo == null && m.playedAtEpochMs == null && m.playedZoneId == null); require(m.ruleVersion == "legacy-fixed-v1"); require(l.lineNumber > 0 && l.selfSide in 1..2 && l.sourceResult in 0..1 && l.sourceDelta.isFinite() && Regex("[0-9a-fA-F]{64}").matches(l.fileSha256) && l.player1.isNotBlank() && l.player2.isNotBlank()); val expectedOutcome = if (l.sourceResult == 1) Outcome.WIN else Outcome.LOSS; require(m.outcome == if (l.selfSide == 1) expectedOutcome else if (expectedOutcome == Outcome.WIN) Outcome.LOSS else Outcome.WIN); require(kotlin.math.abs(m.delta - l.sourceDelta * if (l.selfSide == 1) 1 else -1) <= 1e-7) }
         }
     }
