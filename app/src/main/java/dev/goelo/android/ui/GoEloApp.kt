@@ -19,7 +19,7 @@ import dev.goelo.android.ui.settings.SettingsScreen
 import dev.goelo.android.ui.backup.BackupSheet
 
 @Composable
-fun GoEloApp(viewModel: AppViewModel) {
+fun GoEloApp(viewModel: AppViewModel, onSave: () -> Unit = {}, onShare: () -> Unit = {}, onChooseRestore: () -> Unit = {}, onSaveDestination: (android.net.Uri) -> Unit = {}) {
     val state by viewModel.ui.collectAsState()
     val snapshot = state.snapshot
     val profile = snapshot?.state?.profile
@@ -89,7 +89,7 @@ fun GoEloApp(viewModel: AppViewModel) {
     )
     if (state.backupOpen) BackupSheet(
         busy = state.busy,
-        onSave = viewModel::prepareBackup, onShare = {}, onChooseRestore = {}, onSaveCancelled = viewModel::clearPreparedBackup, onSaveDestination = {},
+        onSave = onSave, onShare = onShare, onChooseRestore = onChooseRestore, onSaveCancelled = viewModel::clearPreparedBackup, onSaveDestination = onSaveDestination,
         onDismiss = viewModel::closeBackup,
     )
     state.restorePreview?.let { dev.goelo.android.ui.backup.RestorePreviewSheet(it, state.busy, viewModel::confirmRestore, viewModel::cancelRestore) }
