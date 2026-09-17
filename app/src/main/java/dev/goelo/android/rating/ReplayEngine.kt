@@ -21,13 +21,18 @@ fun validateState(state: AppState): Result<Unit> = runCatching {
     val p = state.profile
     require(p != null || state.matches.isEmpty()) { "无档案时历史必须为空" }
     if (p != null) {
-        require(p.id.isNotBlank() && p.name.isNotBlank() && p.initialElo.isFinite() && p.initialElo > 0)
+        require(p.id == "local" && p.name.isNotBlank() && p.initialElo.isFinite() && p.initialElo > 0)
         require(p.lastOpponentRank in 1..9)
         require((p.targetElo == null) == (p.targetStartElo == null))
         if (p.targetElo != null) require(p.targetElo.isFinite() && p.targetStartElo!!.isFinite() && p.targetElo > p.targetStartElo)
     }
     require(state.matches.map { it.id }.distinct().size == state.matches.size) { "重复 ID" }
     require(state.matches.map { it.order }.distinct().size == state.matches.size && state.matches.all { it.order > 0 }) { "order 无效" }
+    val firstNativeOrder = state.matches.filter { it.kind == MatchKind.NATIVE }.minOfOrNull { it.order }
+    val lastLegacyOrder = state.matches.filter { it.kind == MatchKind.LEGACY }.maxOfOrNull { it.order }
+    require(firstNativeOrder == null || lastLegacyOrder == null || lastLegacyOrder < firstNativeOrder) {
+        "旧历史必须排在新记录之前"
+    }
     state.matches.forEach { m ->
         require(m.id.isNotBlank() && m.eloBefore.isFinite() && m.delta.isFinite() && m.eloAfter.isFinite())
         when (m.kind) {

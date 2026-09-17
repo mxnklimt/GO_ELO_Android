@@ -36,10 +36,23 @@ class MatchServiceTest {
             service.record("one", RecordInput(7, 0, 0), Outcome.WIN, 1L, "UTC")
             service.record("two", RecordInput(7, 0, 0), Outcome.WIN, 2L, "UTC")
             val edited = service.edit("one", RecordInput(7, 0, 0), Outcome.LOSS, store.read().revision)
-            assertEquals(2200.0, edited.state.matches.last().eloBefore, 0.0)
+            assertEquals(2190.0, edited.state.matches.last().eloBefore, 0.0)
             val deleted = service.delete("one", edited.revision)
             assertEquals(1, deleted.state.matches.size)
             assertEquals(2200.0, deleted.state.matches.single().eloBefore, 0.0)
+        } finally { store.close() }
+    }
+
+    @Test fun undoRestoresPreviousOpponentRank() = runTest {
+        val store = memoryStore()
+        try {
+            val profiles = ProfileService(store)
+            profiles.create("棋手", 2200.0)
+            val receipt = MatchService(store).record("one", RecordInput(5, 0, 0), Outcome.WIN, 1L, "UTC")
+            assertEquals(5, store.read().state.profile!!.lastOpponentRank)
+            MatchService(store).undo(requireNotNull(receipt.undo))
+            assertEquals(7, store.read().state.profile!!.lastOpponentRank)
+            assertTrue(store.read().state.matches.isEmpty())
         } finally { store.close() }
     }
 
