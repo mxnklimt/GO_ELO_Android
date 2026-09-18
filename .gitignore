@@ -14,3 +14,4 @@ local.properties
 .local/
 *.jks
 *.keystore
+.kotlin/

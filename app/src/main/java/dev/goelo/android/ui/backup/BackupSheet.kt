@@ -19,7 +19,7 @@ fun BackupSheet(busy: Boolean, onSave: () -> Unit, onShare: () -> Unit, onChoose
             verticalArrangement=Arrangement.spacedBy(18.dp)) {
             AppMark(Mark.BACKUP,Modifier.size(36.dp))
             PageHeading("把成长，随身带走。","BACKUP  /  数据备份")
-            Text("一份文件，保存你的档案与全部对局。换机后选择文件，即可恢复。",
+            Text("一份文件，保存全部棋手档案与对局。换机后选择文件，即可恢复。",
                 style=MaterialTheme.typography.bodyMedium,color=MaterialTheme.colorScheme.onSurfaceVariant)
             Button(onClick=onSave,enabled=!busy,modifier=Modifier.fillMaxWidth().heightIn(min=54.dp),
                 shape=MaterialTheme.shapes.medium) { Text("保存文件") }

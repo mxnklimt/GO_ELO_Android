@@ -30,6 +30,7 @@ fun HistoryScreen(
     error: String?,
     onEdit: (String, RecordInput, Outcome, Long) -> Unit,
     onDelete: (String, Long) -> Unit,
+    onEditKnown: (String, Outcome, Long) -> Unit = { _, _, _ -> },
 ) {
     var rank by remember { mutableStateOf<Int?>(null) }
     var outcome by remember { mutableStateOf<Outcome?>(null) }
@@ -79,8 +80,8 @@ fun HistoryScreen(
                     if (match.kind == MatchKind.NATIVE) {
                         selected = match
                         selectedRevision = revision
-                        editRank = requireNotNull(match.input).rank
-                        editRecord = "${match.input!!.wins}-${match.input!!.losses}"
+                        editRank = match.input?.rank ?: 7
+                        editRecord = match.input?.let { "${it.wins}-${it.losses}" } ?: ""
                         editOutcome = match.outcome
                     } else selected = match
                 })
@@ -93,8 +94,11 @@ fun HistoryScreen(
         affectedCount = matches.count { it.order > open.order }, busy = busy, error = error,
         onRank = { editRank = it }, onRecord = { editRecord = it }, onOutcome = { editOutcome = it },
         onSave = {
-            val input = dev.goelo.android.rating.parseRecord(editRank, editRecord).getOrNull() ?: return@EditMatchSheet
-            onEdit(open.id, input, editOutcome, selectedRevision)
+            if(open.opponentPlayerId!=null) onEditKnown(open.id,editOutcome,selectedRevision)
+            else {
+                val input = dev.goelo.android.rating.parseRecord(editRank, editRecord).getOrNull() ?: return@EditMatchSheet
+                onEdit(open.id, input, editOutcome, selectedRevision)
+            }
             selected = null
         }, onDelete = { selected = null; deleting = open }, onDismiss = { if (!busy) selected = null },
     )
@@ -105,7 +109,7 @@ fun HistoryScreen(
     )
     deleting?.let { match -> AlertDialog(
         onDismissRequest = { if (!busy) deleting = null }, title = { Text("删除对局？") },
-        text = { Text("将删除：${deleteDetail(match)}\n\n并重算后续 ${matches.count { it.order > match.order }} 盘。") },
+        text = { Text("将删除：${deleteDetail(match)}\n\n同时移除双方记录，并重算所有受影响的后续对局。") },
         confirmButton = { Button(onClick = { onDelete(match.id, selectedRevision); deleting = null }, enabled = !busy) { Text("删除") } },
         dismissButton = { TextButton(onClick = { deleting = null }, enabled = !busy) { Text("取消") } },
     ) }
@@ -117,6 +121,6 @@ private fun matchDateText(match: Match): String = match.playedAtEpochMs?.let { t
 
 private fun deleteDetail(match: Match): String {
     val result = if (match.outcome == Outcome.WIN) "胜" else "负"
-    val opponent = match.input?.let { "${it.rank} 段 · 战绩 ${it.wins}-${it.losses}" } ?: "旧历史/对手信息未知"
+    val opponent = match.opponentName ?: match.input?.let { "${it.rank} 段 · 战绩 ${it.wins}-${it.losses}" } ?: "旧历史/对手信息未知"
     return "$result · $opponent · ${matchDateText(match)} · ${String.format(Locale.US, "%+.1f", match.delta)}"
 }

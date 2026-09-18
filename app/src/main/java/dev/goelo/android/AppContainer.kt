@@ -14,12 +14,13 @@ import java.io.File
 import java.time.Clock
 
 class AppContainer(context: Context) {
-    private val database = Room.databaseBuilder(context, GoEloDatabase::class.java, "go-elo.db").build()
+    private val database = Room.databaseBuilder(context, GoEloDatabase::class.java, "go-elo.db")
+        .addMigrations(GoEloDatabase.MIGRATION_1_2).build()
     val stateStore = RoomStateStore(database)
     val matchService = MatchService(stateStore)
     val profileService = ProfileService(stateStore)
     val backupCodec = BackupCodec()
     val snapshotStore = FileSnapshotStore(File(context.noBackupFilesDir, "recovery"), Clock.systemUTC())
-    val restoreService = RestoreService(stateStore, snapshotStore, backupCodec, Clock.systemUTC(), "0.1.0")
+    val restoreService = RestoreService(stateStore, snapshotStore, backupCodec, Clock.systemUTC(), "0.3.0")
     val documentGateway = AndroidDocumentGateway(context)
 }

@@ -1,6 +1,7 @@
 package dev.goelo.android.data
 
 import androidx.room.Entity
+import androidx.room.ColumnInfo
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import dev.goelo.android.model.LegacyOrigin
@@ -40,10 +41,14 @@ data class MatchEntity(
     val eloAfter: Double,
     val ruleVersion: String,
     val legacyJson: String?,
+    @ColumnInfo(defaultValue = "'local'") val playerId: String = "local",
+    val opponentPlayerId: String? = null,
+    val opponentEloAfter: Double? = null,
 )
 
 @Entity(tableName = "meta")
-data class MetaEntity(@PrimaryKey val id: Int = 0, val revision: Long)
+data class MetaEntity(@PrimaryKey val id: Int = 0, val revision: Long,
+    @ColumnInfo(defaultValue = "'local'") val activePlayerId: String = "local")
 
 private val entityJson = Json { encodeDefaults = true; ignoreUnknownKeys = false }
 
@@ -64,10 +69,12 @@ fun MatchEntity.toModel(): Match = Match(
     eloAfter = eloAfter,
     ruleVersion = ruleVersion,
     legacy = legacyJson?.let { entityJson.decodeFromString<LegacyOrigin>(it) },
+    playerId = playerId, opponentPlayerId = opponentPlayerId, opponentEloAfter = opponentEloAfter,
 )
 
 fun Match.toEntity() = MatchEntity(
     id, order, kind.name, playedAtEpochMs, playedZoneId, outcome.name,
     input?.rank, input?.wins, input?.losses, opponentElo, eloBefore, delta, eloAfter,
     ruleVersion, legacy?.let { entityJson.encodeToString(it) },
+    playerId, opponentPlayerId, opponentEloAfter,
 )

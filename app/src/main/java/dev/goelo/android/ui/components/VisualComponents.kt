@@ -95,7 +95,7 @@ fun deltaText(value: Double): String = String.format(Locale.US,"%+.1f",value)
 @Composable fun ResultRow(match: Match, onClick: (() -> Unit)? = null) {
     val win=match.outcome==Outcome.WIN
     val tint=if(win) Positive else Negative
-    val opponent=match.input?.let { "${it.rank} 段 · ${it.wins}-${it.losses}" }
+    val opponent=match.opponentName ?: match.input?.let { "${it.rank} 段 · ${it.wins}-${it.losses}" }
         ?: match.legacy?.let { if(it.selfSide==1) it.player2 else it.player1 } ?: "旧历史"
     val date=match.playedAtEpochMs?.let { epoch ->
         runCatching { DateTimeFormatter.ofPattern("MM.dd").format(Instant.ofEpochMilli(epoch).atZone(ZoneId.of(match.playedZoneId ?: "UTC"))) }.getOrNull()
@@ -109,12 +109,12 @@ fun deltaText(value: Double): String = String.format(Locale.US,"%+.1f",value)
         }
         Column(Modifier.weight(1f)) {
             Text(opponent,style=MaterialTheme.typography.titleSmall)
-            Text("第 ${match.order} 盘 · $date",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("对局 #${match.order} · $date",style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Column(horizontalAlignment=Alignment.End) {
             Text(deltaText(match.delta),style=MaterialTheme.typography.titleMedium,color=tint)
             Text(eloText(match.eloAfter),style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
-            if(onClick!=null) Text(if(match.input!=null) "更正" else "只读",
+            if(onClick!=null) Text(if(match.kind==dev.goelo.android.model.MatchKind.NATIVE) "更正" else "只读",
                 style=MaterialTheme.typography.labelSmall,color=MutedGold)
         }
     }

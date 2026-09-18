@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface StateDao {
     @Query("SELECT * FROM profile WHERE id = 'local' LIMIT 1") suspend fun profile(): ProfileEntity?
+    @Query("SELECT * FROM profile ORDER BY id ASC") suspend fun profiles(): List<ProfileEntity>
     @Query("SELECT * FROM matches ORDER BY orderIndex ASC") suspend fun matches(): List<MatchEntity>
     @Query("SELECT * FROM meta WHERE id = 0 LIMIT 1") suspend fun meta(): MetaEntity?
     @Query("SELECT revision FROM meta WHERE id = 0 LIMIT 1") fun observeRevision(): Flow<Long?>

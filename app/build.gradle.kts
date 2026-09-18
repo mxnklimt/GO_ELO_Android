@@ -14,12 +14,17 @@ android {
         applicationId = "dev.goelo.android"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.2.0"
+        versionCode = 3
+        versionName = "0.3.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildFeatures { compose = true }
+
+    // Local builds can reuse the installed app's signing identity across isolated workspaces.
+    signingConfigs.getByName("debug") {
+        providers.environmentVariable("GOELO_DEBUG_KEYSTORE").orNull?.let { storeFile = file(it) }
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

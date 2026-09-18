@@ -54,8 +54,8 @@ import java.util.Locale
                 style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
         SectionTitle("对手段位分布")
-        if(ranks.isEmpty()) EmptyPanel("记录新的对局，解锁分析",
-            "旧历史保留原始分差；新录入的段位与战绩将用于分组统计。",Mark.ANALYSIS)
+        if(ranks.isEmpty()) EmptyPanel("暂无段位分组",
+            "此处仅统计临时对手的录入段位。已有棋手对局使用实时等级分，仍计入胜率与月度趋势。",Mark.ANALYSIS)
         else PanelCard {
             ranks.forEach { stat ->
                 Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween) {

@@ -19,4 +19,7 @@ data class AppUiState(
     val backupOpen: Boolean = false,
     val restorePreview: dev.goelo.android.backup.PreparedRestore? = null,
     val pendingExport: Boolean = false,
+    val playersOpen: Boolean = false,
+    val knownOpponentMode: Boolean = false,
+    val opponentId: String? = null,
 )

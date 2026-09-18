@@ -7,6 +7,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.goelo.android.backup.PreparedRestore
+import dev.goelo.android.model.ratingOf
+import dev.goelo.android.model.forPlayer
 import dev.goelo.android.ui.components.*
 import dev.goelo.android.ui.theme.*
 
@@ -19,11 +21,13 @@ fun RestorePreviewSheet(prepared: PreparedRestore, busy: Boolean, onConfirm: () 
             verticalArrangement=Arrangement.spacedBy(18.dp)) {
             PageHeading("找回你的成长记录","RESTORE  /  确认恢复")
             val profile=prepared.envelope.state.profile
-            val current=prepared.envelope.state.matches.maxByOrNull { it.order }?.eloAfter ?: profile?.initialElo ?: 0.0
-            EloHero(profile?.name ?: "未创建档案",current,prepared.envelope.state.matches.size)
+            val ledger=prepared.envelope.state
+            val current=profile?.let { ledger.ratingOf(it.id) } ?: 0.0
+            EloHero(profile?.name ?: "未创建档案",current,profile?.let { ledger.forPlayer(it.id).matches.size } ?: 0)
+            Text("备份包含 ${ledger.allProfiles.size} 位棋手 · ${ledger.matches.size} 场对局",color=Gold)
             Text("来源：${prepared.sourceName}",style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
-            Text("确认后将整体替换当前数据。",style=MaterialTheme.typography.bodyMedium)
+            Text("确认后将整体替换本机全部棋手和对局。",style=MaterialTheme.typography.bodyMedium)
             Button(onClick=onConfirm,enabled=!busy,modifier=Modifier.fillMaxWidth().heightIn(min=54.dp),
                 shape=MaterialTheme.shapes.medium) { Text("确认恢复") }
             TextButton(onClick=onCancel,enabled=!busy,modifier=Modifier.fillMaxWidth()) { Text("取消") }

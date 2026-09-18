@@ -23,16 +23,21 @@ class RoomStateStore(private val database: GoEloDatabase) : StateStore {
             StoreSnapshot(next, current.revision + 1)
         }
 
-    internal suspend fun readSnapshot(): StoreSnapshot = StoreSnapshot(
-        AppState(dao.profile()?.toModel(), dao.matches().map { it.toModel() }),
-        dao.meta()?.revision ?: 0L,
-    )
+    internal suspend fun readSnapshot(): StoreSnapshot {
+        val meta = dao.meta()
+        val profiles = dao.profiles().map { it.toModel() }
+        val selected = profiles.find { it.id == (meta?.activePlayerId ?: "local") }
+        check(profiles.isEmpty() || selected != null) { "当前棋手档案缺失" }
+        return StoreSnapshot(AppState(selected, dao.matches().map { it.toModel() },
+            profiles.filter { it.id != selected?.id }), meta?.revision ?: 0L)
+    }
 
     private suspend fun writeState(state: AppState, revision: Long) {
         dao.clearMatches()
         if (state.matches.isNotEmpty()) dao.putMatches(state.matches.map { it.toEntity() })
-        if (state.profile == null) dao.clearProfile() else dao.putProfile(state.profile.toEntity())
-        dao.putMeta(MetaEntity(revision = revision))
+        dao.clearProfile()
+        state.allProfiles.forEach { dao.putProfile(it.toEntity()) }
+        dao.putMeta(MetaEntity(revision = revision, activePlayerId = state.profile?.id ?: "local"))
     }
 
     fun close() = database.close()

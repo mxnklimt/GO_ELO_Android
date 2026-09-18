@@ -38,7 +38,8 @@ class AppViewModel(
     init {
         viewModelScope.launch {
             store.observe().collect { snapshot ->
-                mutableUi.value = mutableUi.value.copy(snapshot = snapshot)
+                mutableUi.value = mutableUi.value.copy(snapshot = snapshot,
+                    undo = mutableUi.value.undo?.takeIf { it.revision == snapshot.revision })
             }
         }
     }
@@ -49,6 +50,33 @@ class AppViewModel(
     }
 
     fun selectTab(tab: AppTab) { mutableUi.value = mutableUi.value.copy(tab = tab) }
+    fun openPlayers() { if (!mutableUi.value.busy) mutableUi.value = mutableUi.value.copy(playersOpen = true, error = null) }
+    fun closePlayers() { if (!mutableUi.value.busy) mutableUi.value = mutableUi.value.copy(playersOpen = false, error = null) }
+    fun addPlayer(name: String, elo: Double) {
+        val snapshot = mutableUi.value.snapshot ?: return
+        mutate { profiles.add(newId(), name, elo, snapshot.revision); null }
+    }
+    fun selectPlayer(id: String) {
+        val snapshot = mutableUi.value.snapshot ?: return
+        mutate(onSuccess = {
+            pendingRequest = null
+            mutableUi.value = mutableUi.value.copy(playersOpen = false, recordOpen = false, opponentId = null, undo = null)
+        }) {
+            val selected = profiles.select(id, snapshot.revision)
+            mutableUi.value = mutableUi.value.copy(snapshot = selected)
+            null
+        }
+    }
+    fun setKnownOpponentMode(known: Boolean) {
+        if (mutableUi.value.busy) return
+        pendingRequest = null
+        mutableUi.value = mutableUi.value.copy(knownOpponentMode = known, opponentId = null, error = null)
+    }
+    fun setOpponent(id: String) {
+        if (mutableUi.value.busy) return
+        pendingRequest = null
+        mutableUi.value = mutableUi.value.copy(opponentId = id, error = null)
+    }
     fun openBackup() { mutableUi.value = mutableUi.value.copy(backupOpen = true, error = null) }
     fun closeBackup() { mutableUi.value = mutableUi.value.copy(backupOpen = false) }
     fun prepareBackup(onReady: (() -> Unit)? = null) {
@@ -57,7 +85,7 @@ class AppViewModel(
         viewModelScope.launch {
             mutableUi.value = mutableUi.value.copy(busy = true, error = null)
             try {
-                exportBytes = c.encode(BackupEnvelope(exportedAtEpochMs = clock.millis(), appVersion = "0.1.0", state = current.state))
+                exportBytes = c.encode(BackupEnvelope(exportedAtEpochMs = clock.millis(), appVersion = "0.3.0", state = current.state))
                 mutableUi.value = mutableUi.value.copy(pendingExport = true)
                 onReady?.invoke()
             } catch (e: Throwable) { mutableUi.value = mutableUi.value.copy(error = e.message ?: "备份失败") }
@@ -81,7 +109,7 @@ class AppViewModel(
         val prepared = mutableUi.value.restorePreview ?: return
         viewModelScope.launch {
             mutableUi.value = mutableUi.value.copy(busy = true, error = null)
-            try { service.apply(prepared); mutableUi.value = mutableUi.value.copy(restorePreview = null, backupOpen = false) }
+            try { service.apply(prepared); pendingRequest = null; mutableUi.value = mutableUi.value.copy(restorePreview = null, backupOpen = false, undo = null, recordOpen = false, playersOpen = false) }
             catch (e: Throwable) { mutableUi.value = mutableUi.value.copy(error = e.message ?: "恢复失败，原数据未改变") }
             finally { mutableUi.value = mutableUi.value.copy(busy = false) }
         }
@@ -91,7 +119,7 @@ class AppViewModel(
     fun openRecord() {
         val rank = mutableUi.value.snapshot?.state?.profile?.lastOpponentRank ?: 7
         pendingRequest = null
-        mutableUi.value = mutableUi.value.copy(recordOpen = true, rank = rank, recordText = "", error = null)
+        mutableUi.value = mutableUi.value.copy(recordOpen = true, rank = rank, recordText = "", opponentId = null, error = null)
     }
 
     fun closeRecord() {
@@ -99,28 +127,40 @@ class AppViewModel(
     }
 
     fun setRank(rank: Int) {
+        if (mutableUi.value.busy) return
         pendingRequest = null
         mutableUi.value = mutableUi.value.copy(rank = rank.coerceIn(1, 9), error = null)
     }
 
     fun setRecordText(text: String) {
+        if (mutableUi.value.busy) return
         pendingRequest = null
         mutableUi.value = mutableUi.value.copy(recordText = text, error = null)
     }
 
     fun submit(outcome: Outcome) {
         val state = mutableUi.value
-        val input = parseRecord(state.rank, state.recordText).getOrElse {
+        if (state.busy) return
+        val ledger = state.snapshot?.state ?: return
+        val playerId = ledger.profile?.id ?: return
+        val opponentId = if (state.knownOpponentMode) state.opponentId else null
+        if (state.knownOpponentMode && (opponentId == null || opponentId == playerId || ledger.allProfiles.none { it.id == opponentId })) {
+            mutableUi.value = state.copy(error = "请选择一名已有棋手作为对手")
+            return
+        }
+        val input = if (state.knownOpponentMode) null else parseRecord(state.rank, state.recordText).getOrElse {
             mutableUi.value = state.copy(error = "请输入不超过 20 盘的战绩，例如 11-8")
             return
         }
-        val request = pendingRequest?.takeIf { it.input == input && it.outcome == outcome }
-            ?: PendingRequest(newId(), input, outcome, clock.instant().toEpochMilli(), clock.zone.id).also { pendingRequest = it }
+        val request = pendingRequest?.takeIf { it.input == input && it.outcome == outcome && it.playerId == playerId && it.opponentId == opponentId }
+            ?: PendingRequest(newId(), input, outcome, clock.instant().toEpochMilli(), clock.zone.id, playerId, opponentId).also { pendingRequest = it }
         mutate(onSuccess = {
             pendingRequest = null
             mutableUi.value = mutableUi.value.copy(recordOpen = false, recordText = "", undo = it, error = null)
         }) {
-            matches.record(request.id, request.input, request.outcome, request.atEpochMs, request.zoneId).undo
+            if (request.opponentId != null)
+                matches.recordKnown(request.id, request.opponentId, request.outcome, request.atEpochMs, request.zoneId, request.playerId).undo
+            else matches.record(request.id, requireNotNull(request.input), request.outcome, request.atEpochMs, request.zoneId, request.playerId).undo
         }
     }
 
@@ -136,6 +176,10 @@ class AppViewModel(
 
     fun deleteMatch(id: String, revision: Long) = mutate {
         matches.delete(id, revision)
+        null
+    }
+    fun editKnownMatch(id: String, outcome: Outcome, revision: Long) = mutate {
+        matches.editKnown(id, outcome, revision)
         null
     }
 
@@ -177,9 +221,11 @@ class AppViewModel(
 
     private data class PendingRequest(
         val id: String,
-        val input: dev.goelo.android.model.RecordInput,
+        val input: dev.goelo.android.model.RecordInput?,
         val outcome: Outcome,
         val atEpochMs: Long,
         val zoneId: String,
+        val playerId: String,
+        val opponentId: String?,
     )
 }

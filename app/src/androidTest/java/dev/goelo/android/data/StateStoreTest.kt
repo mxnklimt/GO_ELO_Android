@@ -38,10 +38,11 @@ class StateStoreTest {
         } finally { store.close() }
     }
 
-    @Test fun rejectsProfileOutsideTheSingleLocalId() = runTest {
+    @Test fun rejectsDuplicatePlayerIds() = runTest {
         val store = memoryStore()
         try {
-            val invalid = AppState(Profile(id = "someone-else", name = "棋手", initialElo = 2200.0), emptyList())
+            val invalid = AppState(Profile(id = "same", name = "棋手", initialElo = 2200.0), emptyList(),
+                listOf(Profile(id = "same", name = "另一位", initialElo = 2000.0)))
             assertTrue(runCatching { store.update(0) { invalid } }.isFailure)
             assertEquals(0L, store.read().revision)
         } finally { store.close() }

@@ -51,7 +51,7 @@ fun SettingsScreen(
         } }
         Card { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text("初始等级分", style = MaterialTheme.typography.titleMedium)
-            Text("修改后会重算所有新记录。", style = MaterialTheme.typography.bodySmall)
+            Text("修改后会重算该棋手及关联对手的后续分数。", style = MaterialTheme.typography.bodySmall)
             OutlinedTextField(initial, { initial = it }, label = { Text("初始分") }, singleLine = true, enabled = !hasLegacy, modifier = Modifier.fillMaxWidth())
             Button(onClick = { initial.toDoubleOrNull()?.let { onInitialElo(it, revision) } }, enabled = !hasLegacy && initial.toDoubleOrNull() != null && !busy) { Text("重新计算") }
             if (hasLegacy) Text("旧历史的起点由原始分差和导入时的当前分推导，保持固定。", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
@@ -68,7 +68,7 @@ fun SettingsScreen(
         } }
         Card { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("计算说明", style = MaterialTheme.typography.titleMedium)
-            Text("对手强度按所选段位基准分和最近战绩计算；每局采用 K=20 的 ELO 更新。", style = MaterialTheme.typography.bodySmall)
+            Text("已有棋手：使用双方赛前等级分，同步更新双方。临时对手：按段位与最近战绩估分，仅更新当前棋手。两种方式均采用 K=20。", style = MaterialTheme.typography.bodySmall)
             Text("参考段位用于估算，不等于任何平台的正式段位。", style = MaterialTheme.typography.bodySmall)
         } }
         if (error != null) Text(error, color = MaterialTheme.colorScheme.error)

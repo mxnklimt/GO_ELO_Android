@@ -1,88 +1,90 @@
 package dev.goelo.android.data
 
-import dev.goelo.android.model.AppState
-import dev.goelo.android.model.Match
-import dev.goelo.android.model.MatchKind
-import dev.goelo.android.model.Outcome
-import dev.goelo.android.model.RecordInput
+import dev.goelo.android.model.*
 import dev.goelo.android.rating.opponentElo
-import dev.goelo.android.rating.replay
+import dev.goelo.android.rating.replayState
 
-data class UndoToken(val matchId: String, val revision: Long, val previousRank: Int)
+data class UndoToken(val matchId: String, val revision: Long, val previousRank: Int, val playerId: String = "local")
 data class RecordReceipt(val match: Match, val undo: UndoToken?)
 
 class MatchService(private val store: StateStore) {
-    suspend fun record(id: String, input: RecordInput, outcome: Outcome, at: Long, zoneId: String): RecordReceipt {
+    suspend fun record(id: String, input: RecordInput, outcome: Outcome, at: Long, zoneId: String,
+        playerId: String? = null): RecordReceipt = save(id, input, null, outcome, at, zoneId, playerId)
+
+    suspend fun recordKnown(id: String, opponentId: String, outcome: Outcome, at: Long, zoneId: String,
+        playerId: String): RecordReceipt = save(id, null, opponentId, outcome, at, zoneId, playerId)
+
+    private suspend fun save(id: String, input: RecordInput?, opponentId: String?, outcome: Outcome,
+        at: Long, zoneId: String, playerId: String?): RecordReceipt {
         require(id.isNotBlank()) { "记录 ID 不能为空" }
         require(at >= 0) { "对局时间无效" }
         val before = store.read()
-        before.state.matches.firstOrNull { it.id == id }?.let { existing ->
-            require(existing.sameRequest(input, outcome, at, zoneId)) { "同一记录 ID 的内容不一致" }
-            return RecordReceipt(existing, null)
-        }
-        val profile = requireNotNull(before.state.profile) { "请先创建档案" }
-        val nextState = fun(state: AppState): AppState {
-            val existing = state.matches.firstOrNull { it.id == id }
-            if (existing != null) {
-                require(existing.sameRequest(input, outcome, at, zoneId)) { "同一记录 ID 的内容不一致" }
-                return state
-            } else {
-                val currentProfile = requireNotNull(state.profile) { "请先创建档案" }
-                val nextOrder = (state.matches.maxOfOrNull { it.order } ?: 0L) + 1L
-                val beforeElo = currentElo(state)
-                val seed = Match(
-                    id, nextOrder, MatchKind.NATIVE, at, zoneId, outcome, input, opponentElo(input),
-                    beforeElo, 0.0, beforeElo, "elo-v1",
-                )
-                return rehydrated(state.copy(profile = currentProfile.copy(lastOpponentRank = input.rank), matches = state.matches + seed))
-            }
+        val ownerId = playerId ?: requireNotNull(before.state.profile).id
+        val owner = requireNotNull(before.state.allProfiles.find { it.id == ownerId }) { "未找到棋手" }
+        if (opponentId != null) {
+            require(opponentId != ownerId) { "不能与自己对局" }
+            require(before.state.allProfiles.any { it.id == opponentId }) { "未找到对手" }
+        } else opponentElo(requireNotNull(input))
+        fun Match.sameRequest() = this.playerId == ownerId && opponentPlayerId == opponentId &&
+            this.input == input && this.outcome == outcome && playedAtEpochMs == at && playedZoneId == zoneId && kind == MatchKind.NATIVE
+        before.state.matches.firstOrNull { it.id == id }?.let {
+            require(it.sameRequest()) { "同一记录 ID 的内容不一致" }
+            return RecordReceipt(it, null)
         }
         return try {
-            val saved = store.update(before.revision, nextState)
-            val match = requireNotNull(saved.state.matches.firstOrNull { it.id == id })
-            val undo = if (saved.state.matches.size == before.state.matches.size) null else
-                UndoToken(id, saved.revision, profile.lastOpponentRank)
-            RecordReceipt(match, undo)
+            val saved = store.update(before.revision) { state ->
+                val seed = Match(id, (state.matches.maxOfOrNull { it.order } ?: 0) + 1,
+                    MatchKind.NATIVE, at, zoneId, outcome, input, null, 0.0, 0.0, 0.0,
+                    if (opponentId == null) "elo-v1" else "elo-pair-v1",
+                    playerId = ownerId, opponentPlayerId = opponentId)
+                val ranked = if (input == null) state else state.updatePlayer(ownerId) { it.copy(lastOpponentRank = input.rank) }
+                rehydrated(ranked.copy(matches = state.matches + seed))
+            }
+            RecordReceipt(saved.state.matches.single { it.id == id }, UndoToken(id, saved.revision, owner.lastOpponentRank, ownerId))
         } catch (error: IllegalStateException) {
-            // A concurrent retry may already have committed this request. It is the only retry allowed.
-            val after = store.read()
-            val existing = after.state.matches.firstOrNull { it.id == id }
-            if (existing != null && existing.sameRequest(input, outcome, at, zoneId)) RecordReceipt(existing, null) else throw error
+            val existing = store.read().state.matches.firstOrNull { it.id == id }
+            if (existing != null && existing.sameRequest()) RecordReceipt(existing, null) else throw error
         }
     }
 
     suspend fun edit(id: String, input: RecordInput, outcome: Outcome, expectedRevision: Long): StoreSnapshot =
         store.update(expectedRevision) { state ->
-            val old = requireNotNull(state.matches.firstOrNull { it.id == id }) { "未找到对局" }
-            require(old.kind == MatchKind.NATIVE) { "旧历史不能编辑" }
-            rehydrated(state.copy(matches = state.matches.map { match ->
-                if (match.id == id) match.copy(input = input, opponentElo = opponentElo(input), outcome = outcome) else match
-            }))
+            val old = editable(state, id)
+            require(old.opponentPlayerId == null && old.playerId == state.profile?.id) { "请使用已有棋手对局更正" }
+            rehydrated(state.copy(matches = state.matches.map { if (it.id == id) it.copy(input = input, outcome = outcome) else it }))
+        }
+
+    suspend fun editKnown(id: String, outcome: Outcome, expectedRevision: Long): StoreSnapshot =
+        store.update(expectedRevision) { state ->
+            val old = editable(state, id)
+            require(old.opponentPlayerId != null) { "不是已有棋手对局" }
+            val canonicalOutcome = if (state.profile?.id == old.playerId) outcome else outcome.opposite()
+            rehydrated(state.copy(matches = state.matches.map { if (it.id == id) it.copy(outcome = canonicalOutcome) else it }))
         }
 
     suspend fun delete(id: String, expectedRevision: Long): StoreSnapshot = store.update(expectedRevision) { state ->
-        val old = requireNotNull(state.matches.firstOrNull { it.id == id }) { "未找到对局" }
-        require(old.kind == MatchKind.NATIVE) { "旧历史不能删除" }
+        editable(state, id)
         rehydrated(state.copy(matches = state.matches.filterNot { it.id == id }))
     }
 
     suspend fun undo(token: UndoToken): StoreSnapshot = store.update(token.revision) { state ->
         val last = state.matches.maxByOrNull { it.order }
-        require(last?.id == token.matchId && last.kind == MatchKind.NATIVE) { "该记录已不能撤销" }
-        val profile = requireNotNull(state.profile)
-        rehydrated(state.copy(profile = profile.copy(lastOpponentRank = token.previousRank), matches = state.matches.filterNot { it.id == token.matchId }))
+        require(last?.id == token.matchId && last.kind == MatchKind.NATIVE && last.playerId == token.playerId) { "该记录已不能撤销" }
+        rehydrated(state.updatePlayer(token.playerId) { it.copy(lastOpponentRank = token.previousRank) }
+            .copy(matches = state.matches.filterNot { it.id == token.matchId }))
     }
 
-    private fun Match.sameRequest(input: RecordInput, outcome: Outcome, at: Long, zoneId: String) =
-        kind == MatchKind.NATIVE && this.input == input && this.outcome == outcome && playedAtEpochMs == at && playedZoneId == zoneId
+    private fun editable(state: AppState, id: String): Match {
+        val match = requireNotNull(state.matches.find { it.id == id }) { "未找到对局" }
+        require(match.kind == MatchKind.NATIVE) { "旧历史不能编辑或删除" }
+        require(state.profile?.id == match.playerId || state.profile?.id == match.opponentPlayerId) { "对局不属于当前棋手" }
+        return match
+    }
 }
 
-internal fun currentElo(state: AppState): Double =
-    state.matches.maxByOrNull { it.order }?.eloAfter ?: requireNotNull(state.profile).initialElo
-
-/** Replays in chronological semantic order but retains persisted order positions. */
-internal fun rehydrated(state: AppState): AppState {
-    val profile = requireNotNull(state.profile)
-    val recalculated = replay(profile.initialElo, state.matches).associateBy { it.id }
-    return state.copy(matches = state.matches.map { requireNotNull(recalculated[it.id]) })
-}
+private fun AppState.updatePlayer(id: String, transform: (Profile) -> Profile): AppState = copy(
+    profile = profile?.let { if (it.id == id) transform(it) else it },
+    otherProfiles = otherProfiles.map { if (it.id == id) transform(it) else it },
+)
+internal fun currentElo(state: AppState): Double = state.ratingOf(requireNotNull(state.profile).id)
+internal fun rehydrated(state: AppState): AppState = replayState(state)
