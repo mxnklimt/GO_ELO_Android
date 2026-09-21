@@ -39,9 +39,14 @@ fun opponentElo(input: RecordInput, ruleVersion: String): Double {
     return (base + correction).also { require(it.isFinite()) }
 }
 
+fun winProbability(selfElo: Double, opponentElo: Double): Double {
+    require(selfElo.isFinite() && opponentElo.isFinite())
+    return 1.0 / (1.0 + 10.0.pow((opponentElo - selfElo) / 400.0))
+}
+
 fun scoreChange(selfElo: Double, opponentElo: Double, outcome: Outcome): ScoreChange {
     require(selfElo.isFinite() && opponentElo.isFinite())
-    val expected = 1.0 / (1.0 + 10.0.pow((opponentElo - selfElo) / 400.0))
+    val expected = winProbability(selfElo, opponentElo)
     val delta = 20.0 * ((if (outcome == Outcome.WIN) 1.0 else 0.0) - expected)
     return ScoreChange(selfElo, delta, selfElo + delta)
 }
