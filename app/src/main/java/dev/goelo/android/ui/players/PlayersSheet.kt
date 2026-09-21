@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import dev.goelo.android.model.*
 import dev.goelo.android.ui.components.*
 import dev.goelo.android.ui.theme.*
+import dev.goelo.android.rating.rankBaseline
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,7 +47,7 @@ fun PlayersSheet(state: AppState, busy: Boolean, error: String?,
                         modifier=Modifier.fillMaxWidth().semantics { testTag="add-player-elo" })
                     Text("可直接填写当前等级分，或用段位基准填入。",style=MaterialTheme.typography.bodySmall)
                     Row(Modifier.horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                        (1..9).forEach { rank -> AssistChip(onClick={initial=(1000+200*(rank-1)).toString()},
+                        (1..9).forEach { rank -> AssistChip(onClick={initial=rankBaseline(rank).toString()},
                             enabled=!busy,label={Text("$rank 段")}) }
                     }
                     Text("新棋手从此分数开始记录；已有棋手对局会同时更新双方。",style=MaterialTheme.typography.bodySmall,

@@ -60,7 +60,7 @@ fun validateState(state: AppState): Result<Unit> = runCatching {
                 ZoneId.of(m.playedZoneId)
                 require(m.legacy == null)
                 if (m.opponentPlayerId == null) {
-                    require(m.ruleVersion == TEMPORARY_ELO_RULE_V1 || m.ruleVersion == TEMPORARY_ELO_RULE_V2) { "$path.ruleVersion 无效" }
+                    require(m.ruleVersion == TEMPORARY_ELO_RULE_V1 || m.ruleVersion == TEMPORARY_ELO_RULE_V2 || m.ruleVersion == TEMPORARY_ELO_RULE_V3) { "$path.ruleVersion 无效" }
                     require(m.input != null)
                     require(abs(requireNotNull(m.opponentElo) - opponentElo(m.input, m.ruleVersion)) <= 1e-7)
                 } else {

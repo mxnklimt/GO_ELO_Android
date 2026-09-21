@@ -21,6 +21,6 @@ class OnboardingTest {
         compose.onNodeWithTag("profile-name").performTextInput("  小林  ")
         compose.onNodeWithText("7段").performClick()
         compose.onNodeWithText("开始记录").performScrollTo().performClick()
-        compose.runOnIdle { assertEquals("小林" to 2200.0, received) }
+        compose.runOnIdle { assertEquals("小林" to 2300.0, received) }
     }
 }

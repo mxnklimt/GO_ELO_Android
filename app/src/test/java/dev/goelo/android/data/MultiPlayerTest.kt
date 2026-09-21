@@ -54,7 +54,7 @@ class MultiPlayerTest {
         service.record("t",RecordInput(6,0,0),Outcome.WIN,2,"UTC")
         val s = store.read().state
         assertEquals("c",s.profile!!.id)
-        assertEquals(2010.0,elo(s,"c"),1e-8)
+        assertEquals(2012.8012999960577,elo(s,"c"),1e-8)
         assertEquals(2010.0,elo(s,"local"),1e-8)
         assertEquals(1990.0,elo(s,"b"),1e-8)
         assertEquals(listOf("t"),s.forPlayer("c").matches.map { it.id })
@@ -136,7 +136,7 @@ class MultiPlayerTest {
         assertEquals(1,store.read().state.matches.size)
         service.recordKnown("known","b",Outcome.WIN,2,"UTC","local")
         val state=store.read().state
-        assertEquals(2019.71225631668,elo(state,"local"),1e-8)
-        assertEquals(1990.28774368332,elo(state,"b"),1e-8)
+        assertEquals(2022.43301560546,elo(state,"local"),1e-8)
+        assertEquals(1990.3682843906022,elo(state,"b"),1e-8)
     }
 }

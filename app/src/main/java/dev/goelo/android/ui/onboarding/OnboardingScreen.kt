@@ -9,10 +9,11 @@ import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
 import dev.goelo.android.ui.components.*
 import dev.goelo.android.ui.theme.*
+import dev.goelo.android.rating.rankBaseline
 
 @Composable fun OnboardingScreen(onCreate: (String, Double) -> Unit) {
     var name by remember { mutableStateOf("") }
-    var eloText by remember { mutableStateOf("2200") }
+    var eloText by remember { mutableStateOf("2300") }
     val valid=name.trim().isNotEmpty() && eloText.toDoubleOrNull()?.let { it.isFinite() && it>0 }==true
     Column(Modifier.fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement=Arrangement.spacedBy(22.dp)) {
@@ -26,7 +27,7 @@ import dev.goelo.android.ui.theme.*
             Text("用段位快速设定起点",style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(8.dp)) {
                 listOf(1,5,7,9).forEach { rank ->
-                    AssistChip(onClick={eloText=(1000+200*(rank-1)).toString()},label={Text("${rank}段")})
+                    AssistChip(onClick={eloText=rankBaseline(rank).toString()},label={Text("${rank}段")})
                 }
             }
             OutlinedTextField(eloText,{eloText=it},label={Text("初始等级分")},
