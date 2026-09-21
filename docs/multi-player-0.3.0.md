@@ -34,7 +34,7 @@ $env:GRADLE_USER_HOME = 'C:/Users/mxnkilmt/Documents/Codex/Projects/GO_ELO_Andro
 ./gradlew.bat :app:assembleDebug :app:lintDebug :app:testDebugUnitTest :app:compileDebugAndroidTestKotlin --offline --console=plain '-Pkotlin.compiler.execution.strategy=in-process'
 ```
 
-- BUILD SUCCESSFUL。37 项 JVM 测试，无失败/错误/跳过；Lint 0 errors、5 warnings（依赖更新及原有资源提示）。
+- BUILD SUCCESSFUL。43 项 JVM 测试，无失败/错误/跳过；Lint 0 errors、5 warnings（依赖更新及原有资源提示）。
 - 测试覆盖等分双方变为 2010/1990、切换与临时记录隔离、三人级联更正/删除、撤销、重复请求、自我对局及不存在对手拒绝、初始分修改、旧备份升级、多棋手备份往返及错误关联/篡改分值拒绝。
 - 宿主 SQLite 执行生产 MIGRATION_1_2 SQL，旧分值与 revision 保留，新增列/default 与导出 v2 schema 对齐。v1 schema 原样保留。
 - 新增 Android Room 迁移/重开/回滚测试及添加棋手→已有对手记分→第二方历史 UI 测试，均编译通过。
