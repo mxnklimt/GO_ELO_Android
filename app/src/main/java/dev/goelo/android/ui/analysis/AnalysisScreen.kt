@@ -13,17 +13,19 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import dev.goelo.android.model.AppState
+import dev.goelo.android.model.ratingOf
 import dev.goelo.android.stats.*
 import dev.goelo.android.ui.components.*
 import dev.goelo.android.ui.theme.*
 import java.util.Locale
 
-@Composable fun AnalysisScreen(state: AppState, range: HistoryRange, onRange: (HistoryRange) -> Unit) {
-    val selected=if(range.count==null) state.matches else state.matches.takeLast(range.count)
-    val summary=summarize(state,range)
+@Composable fun AnalysisScreen(ledger: AppState, personal: AppState, range: HistoryRange, onRange: (HistoryRange) -> Unit) {
+    val selected=if(range.count==null) personal.matches else personal.matches.takeLast(range.count)
+    val summary=summarize(personal,range)
     val ranks=byRank(selected)
-    val months=byMonth(state.matches)
+    val months=byMonth(personal.matches)
     val unknownRank=selected.count { it.input==null }
+    val currentPlayerId = requireNotNull(personal.profile).id
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement=Arrangement.spacedBy(20.dp)) {
         PageHeading("看见你的进步","ANALYSIS  /  棋力分析")
@@ -53,6 +55,7 @@ import java.util.Locale
             Text("当前连胜 ${summary.currentStreak}  ·  最长连胜 ${summary.longestStreak}  ·  全部历史",
                 style=MaterialTheme.typography.bodySmall,color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        PredictionCard(ledger.ratingOf(currentPlayerId), ledger, currentPlayerId)
         SectionTitle("对手段位分布")
         if(ranks.isEmpty()) EmptyPanel("暂无段位分组",
             "此处仅统计临时对手的录入段位。已有棋手对局使用实时等级分，仍计入胜率与月度趋势。",Mark.ANALYSIS)
@@ -69,6 +72,7 @@ import java.util.Locale
             if(unknownRank>0) Text("另有 $unknownRank 盘缺少对手段位，未计入分组。",style=MaterialTheme.typography.bodySmall,
                 color=MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        HeadToHeadCard(headToHead(ledger, currentPlayerId))
         SectionTitle("月度趋势","全部有日期对局")
         if(months.isEmpty()) EmptyPanel("从今天积累月度轨迹","旧记录没有日期，月度表现会从新对局开始。",Mark.HISTORY)
         else PanelCard {

@@ -75,7 +75,7 @@ fun GoEloApp(viewModel: AppViewModel, onSave: () -> Unit = {}, onShare: () -> Un
                     undoAvailable = state.undo != null,
                     onUndo = viewModel::undoLastRecord,
                 )
-                AppTab.ANALYSIS -> AnalysisScreen(personal, state.range, viewModel::selectRange)
+                AppTab.ANALYSIS -> AnalysisScreen(ledger = snapshot.state, personal = personal, range = state.range, onRange = viewModel::selectRange)
                 AppTab.HISTORY -> HistoryScreen(
                     matches = personal.matches,
                     revision = snapshot.revision,
