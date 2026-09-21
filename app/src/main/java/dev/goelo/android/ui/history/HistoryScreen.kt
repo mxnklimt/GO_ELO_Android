@@ -15,6 +15,7 @@ import dev.goelo.android.model.MatchKind
 import dev.goelo.android.model.Outcome
 import dev.goelo.android.model.RecordInput
 import dev.goelo.android.stats.HistoryFilter
+import dev.goelo.android.stats.MatchScope
 import dev.goelo.android.stats.filterMatches
 import java.time.Instant
 import java.time.ZoneId
@@ -37,6 +38,7 @@ fun HistoryScreen(
     var undated by remember { mutableStateOf(false) }
     var fromDate by remember { mutableStateOf("") }
     var toDate by remember { mutableStateOf("") }
+    var scope by remember { mutableStateOf(MatchScope.ALL) }
     var filtersOpen by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf<Match?>(null) }
     var selectedRevision by remember { mutableLongStateOf(0L) }
@@ -44,7 +46,7 @@ fun HistoryScreen(
     var editRank by remember { mutableIntStateOf(7) }
     var editRecord by remember { mutableStateOf("") }
     var editOutcome by remember { mutableStateOf(Outcome.WIN) }
-    val filter = HistoryFilter(rank, outcome, fromDate.ifBlank { null }, toDate.ifBlank { null }, undated)
+    val filter = HistoryFilter(rank, outcome, fromDate.ifBlank { null }, toDate.ifBlank { null }, undated, scope)
     val result = remember(matches, filter) { runCatching { filterMatches(matches, filter) } }
     val visible = result.getOrDefault(emptyList())
     Column(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
@@ -63,6 +65,11 @@ fun HistoryScreen(
             FilterChip(outcome == Outcome.WIN, { outcome = Outcome.WIN }, label = { Text("胜") })
             FilterChip(outcome == Outcome.LOSS, { outcome = Outcome.LOSS }, label = { Text("负") })
             FilterChip(undated, { undated = !undated }, label = { Text("仅旧历史") })
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+            FilterChip(scope == MatchScope.ALL, { scope = MatchScope.ALL }, label = { Text("全部对局") })
+            FilterChip(scope == MatchScope.TEMPORARY, { scope = MatchScope.TEMPORARY }, label = { Text("临时对手") })
+            FilterChip(scope == MatchScope.PLAYER_LIBRARY, { scope = MatchScope.PLAYER_LIBRARY }, label = { Text("棋手库对局") })
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             OutlinedTextField(fromDate, { fromDate = it }, label = { Text("起始日期") }, placeholder = { Text("YYYY-MM-DD") }, singleLine = true, modifier = Modifier.weight(1f))
