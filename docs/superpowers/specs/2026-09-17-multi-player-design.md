@@ -11,7 +11,7 @@
 ## 数据与迁移
 比较：在每人档案复制对局会产生双份同步问题；保存统一对局并按棋手投影更稳妥，采用后者。
 AppState 保留 profile 为当前选中棋手、matches 为全局唯一记录，增加 otherProfiles。所有棋手通过 allProfiles 访问。
-Match 增加 playerId（默认 local）、opponentPlayerId（可空）、opponentEloAfter（可空）。已有对手使用 elo-pair-v1，临时对手沿用 elo-v1，旧记录 legacy-fixed-v1 保留。
+Match 增加 playerId（默认 local）、opponentPlayerId（可空）、opponentEloAfter（可空）。已有对手使用 elo-pair-v1，临时对手新记录使用 elo-v2；历史 elo-v1 和旧记录 legacy-fixed-v1 均保留并按各自规则重放。
 按 order 从所有 initialElo 起点重放；已有对手分差严格互为相反数。投影第二方时交换赛前赛后分，反转胜负和分差；视图副本绝不写回数据库。
 Room v1→v2 保留原 profile/matches；新增三列及 meta.activePlayerId，旧局 playerId=local。事务更新全部档案及对局。
 备份 v2 包含所有棋手和统一历史；严格接受 v1 结构并自动升级，不伪造旧文件中只有姓名的对手档案；拒绝无效外键、自我对局、重复 ID、分值不一致、更高格式版本。

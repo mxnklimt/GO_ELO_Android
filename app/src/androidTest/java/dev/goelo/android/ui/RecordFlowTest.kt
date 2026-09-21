@@ -37,7 +37,7 @@ class RecordFlowTest {
         compose.onNodeWithText("记一盘").performClick()
         compose.onNodeWithTag("submit-win").assertIsNotEnabled()
         compose.onNodeWithTag("opponent-record").performTextInput("11-8")
-        compose.onNodeWithTag("opponent-elo").assertTextEquals("2255.3")
+        compose.onNodeWithTag("opponent-elo").assertTextEquals("2213.8")
         compose.onNodeWithTag("submit-win").assertIsEnabled().performClick()
         compose.waitUntil(5_000) { compose.onAllNodesWithTag("record-sheet").fetchSemanticsNodes().isEmpty() }
         compose.onNodeWithText("撤销").assertIsDisplayed()

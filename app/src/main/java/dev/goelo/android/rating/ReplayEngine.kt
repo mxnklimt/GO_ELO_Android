@@ -16,7 +16,7 @@ fun replayState(state: AppState): AppState {
         val opponent = if (otherId != null) {
             require(otherId != m.playerId) { "不能与自己对局" }
             requireNotNull(ratings[otherId]) { "对手棋手不存在" }
-        } else m.input?.let(::opponentElo)
+        } else m.input?.let { opponentElo(it, m.ruleVersion) }
         val delta = if (m.kind == MatchKind.LEGACY) {
             val l = requireNotNull(m.legacy)
             l.sourceDelta * if (l.selfSide == 1) 1 else -1
@@ -60,9 +60,9 @@ fun validateState(state: AppState): Result<Unit> = runCatching {
                 ZoneId.of(m.playedZoneId)
                 require(m.legacy == null)
                 if (m.opponentPlayerId == null) {
-                    require(m.ruleVersion == "elo-v1") { "$path.ruleVersion 无效" }
+                    require(m.ruleVersion == TEMPORARY_ELO_RULE_V1 || m.ruleVersion == TEMPORARY_ELO_RULE_V2) { "$path.ruleVersion 无效" }
                     require(m.input != null)
-                    require(abs(requireNotNull(m.opponentElo) - opponentElo(m.input)) <= 1e-7)
+                    require(abs(requireNotNull(m.opponentElo) - opponentElo(m.input, m.ruleVersion)) <= 1e-7)
                 } else {
                     require(m.ruleVersion == "elo-pair-v1") { "$path.ruleVersion 无效" }
                     require(m.input == null) { "已有棋手不使用估分战绩" }
