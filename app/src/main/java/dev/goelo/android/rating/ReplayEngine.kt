@@ -31,6 +31,9 @@ fun replayState(state: AppState): AppState {
 
 fun validateState(state: AppState): Result<Unit> = runCatching {
     require(state.profile != null || (state.matches.isEmpty() && state.otherProfiles.isEmpty())) { "无档案时历史必须为空" }
+    require(state.dogIds.size <= 100_000) { "狗榜数量超过上限" }
+    require(state.dogIds.all { it.isNotBlank() && it == it.trim() }) { "狗榜 ID 无效" }
+    require(state.dogIds.map { it.lowercase() }.distinct().size == state.dogIds.size) { "狗榜 ID 重复" }
     val players = state.allProfiles
     require(players.map { it.id }.distinct().size == players.size) { "重复棋手 ID" }
     players.forEach { p ->

@@ -11,11 +11,14 @@ interface StateDao {
     @Query("SELECT * FROM profile WHERE id = 'local' LIMIT 1") suspend fun profile(): ProfileEntity?
     @Query("SELECT * FROM profile ORDER BY id ASC") suspend fun profiles(): List<ProfileEntity>
     @Query("SELECT * FROM matches ORDER BY orderIndex ASC") suspend fun matches(): List<MatchEntity>
+    @Query("SELECT id FROM dog_ids ORDER BY id ASC") suspend fun dogIds(): List<String>
     @Query("SELECT * FROM meta WHERE id = 0 LIMIT 1") suspend fun meta(): MetaEntity?
     @Query("SELECT revision FROM meta WHERE id = 0 LIMIT 1") fun observeRevision(): Flow<Long?>
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun putProfile(entity: ProfileEntity)
     @Query("DELETE FROM profile") suspend fun clearProfile()
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun putMatches(entities: List<MatchEntity>)
     @Query("DELETE FROM matches") suspend fun clearMatches()
+    @Query("DELETE FROM dog_ids") suspend fun clearDogIds()
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun putDogIds(entities: List<DogIdEntity>)
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun putMeta(entity: MetaEntity)
 }

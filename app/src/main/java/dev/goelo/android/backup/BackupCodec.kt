@@ -20,11 +20,11 @@ data class BackupEnvelope(
 ) {
     companion object {
         const val FORMAT = "go-elo-backup"
-        const val SCHEMA_VERSION = 2
+        const val SCHEMA_VERSION = 3
     }
 }
 
-/** Strict v1 reader and v2 writer. Decode normalizes v1 before it reaches restore/snapshots. */
+/** Strict v1/v2/v3 reader and v3 writer. Decode normalizes older versions before restore. */
 class BackupCodec {
     fun encode(envelope: BackupEnvelope): ByteArray {
         validateEnvelope(envelope)
@@ -38,7 +38,7 @@ class BackupCodec {
         val root = requireObject(json.parseToJsonElement(strictUtf8(bytes)), "备份")
         requireKeys(root, ENVELOPE_KEYS, "备份")
         val version = (root["schemaVersion"] as? JsonPrimitive)?.intOrNull
-        require(version == 1 || version == 2) { "不支持的备份版本" }
+        require(version == 1 || version == 2 || version == 3) { "不支持的备份版本" }
         validateShape(root, version)
         val envelope = json.decodeFromJsonElement<BackupEnvelope>(root)
         if (version == 1) require(envelope.state.profile == null || envelope.state.profile.id == "local") { "旧档案 ID 无效" }
@@ -54,6 +54,7 @@ class BackupCodec {
         require(envelope.appVersion.isNotBlank()) { "应用版本不能为空" }
         require(envelope.state.matches.size <= MAX_MATCHES) { "对局数量超过上限" }
         require(envelope.state.allProfiles.size <= MAX_PLAYERS) { "棋手数量超过上限" }
+        require(envelope.state.dogIds.size <= MAX_DOG_IDS) { "狗榜数量超过上限" }
         val seen = mutableSetOf<String>()
         envelope.state.matches.forEachIndexed { index, match ->
             require(seen.add(match.id)) { "state.matches[$index].id 重复" }
@@ -63,13 +64,25 @@ class BackupCodec {
 
     private fun validateShape(root: JsonObject, version: Int) {
         val state = requireObject(root.getValue("state"), "state")
-        requireKeys(state, if (version == 1) STATE_KEYS else STATE_KEYS + "otherProfiles", "state")
+        val stateKeys = when (version) {
+            1 -> STATE_KEYS
+            2 -> STATE_KEYS + "otherProfiles"
+            else -> STATE_KEYS + "otherProfiles" + "dogIds"
+        }
+        requireKeys(state, stateKeys, "state")
         val profile = state.getValue("profile")
         if (profile !is JsonNull) requireKeys(requireObject(profile, "profile"), PROFILE_KEYS, "profile")
-        if (version == 2) {
+        if (version >= 2) {
             val others = state["otherProfiles"] as? JsonArray ?: error("otherProfiles 必须是数组")
             require(others.size < MAX_PLAYERS)
             others.forEachIndexed { index, p -> requireKeys(requireObject(p, "otherProfiles[$index]"), PROFILE_KEYS, "otherProfiles[$index]") }
+        }
+        if (version == 3) {
+            val dogIds = state["dogIds"] as? JsonArray ?: error("dogIds 必须是数组")
+            require(dogIds.size <= MAX_DOG_IDS)
+            dogIds.forEachIndexed { index, id ->
+                require((id as? JsonPrimitive)?.isString == true && id.content.isNotBlank()) { "dogIds[$index] 无效" }
+            }
         }
         val matches = state["matches"] as? JsonArray ?: error("state.matches 必须是数组")
         require(matches.size <= MAX_MATCHES)
@@ -102,6 +115,7 @@ class BackupCodec {
         const val MAX_ARCHIVE_BYTES = 32 * 1024 * 1024
         const val MAX_MATCHES = 100_000
         const val MAX_PLAYERS = 10_000
+        const val MAX_DOG_IDS = 100_000
         val ENVELOPE_KEYS = setOf("format", "schemaVersion", "exportedAtEpochMs", "appVersion", "state")
         val STATE_KEYS = setOf("profile", "matches")
         val PROFILE_KEYS = setOf("id", "name", "initialElo", "targetElo", "targetStartElo", "lastOpponentRank")

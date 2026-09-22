@@ -12,12 +12,13 @@
 6. 「临时对手」保留段位＋最近不超过 20 盘战绩的估分规则，只更新当前棋手。
 7. 分析页可输入临时对手或选择已有棋手预测胜率，并查看与棋手库对手的历史胜负。
 8. 历史页的“对局类型”可筛选“棋手库对局”，只保留双方都有棋手档案的对局。
-9. 备份文件包含全部棋手和全部对局，恢复预览显示总量，恢复时整体替换。
+9. 狗榜页可录入、检索和移除野狐 ID；只保存 ID，不保存备注或证据。
+10. 备份文件包含全部棋手、全部对局和狗榜 ID，恢复预览显示总量，恢复时整体替换。
 
 ## 数据兼容
 
-- Room 数据库升级到 v2：原个人档案、对局及精确历史分差保留，旧对局归原棋手 local。
-- 备份升级到 schemaVersion 2，仍读取原 schemaVersion 1 的 .goelo.json。
+- Room 数据库升级到 v3：新增狗榜 ID 表，原个人档案、对局及精确历史分差保留，旧对局归原棋手 local。
+- 备份升级到 schemaVersion 3，仍读取原 schemaVersion 1/2 的 .goelo.json；旧文件的狗榜为空。
 - 不根据旧历史中的对手姓名自动创建档案或猜测对手当前 ELO。
 - 已有对手按双方赛前 ELO、K=20 更新；全精度计算。临时对手规则不加平滑；新记录使用 `elo-v3`（1 段 1100、系数 100），历史 `elo-v1/v2` 记录继续使用各自原规则。编辑旧临时对手记录时会按当前规则重新计算。
 - 同一场比赛在全局保存一次，各棋手页面按自身视角显示。
@@ -34,9 +35,9 @@ $env:GRADLE_USER_HOME = 'C:/Users/mxnkilmt/Documents/Codex/Projects/GO_ELO_Andro
 ./gradlew.bat :app:assembleDebug :app:lintDebug :app:testDebugUnitTest :app:compileDebugAndroidTestKotlin --offline --console=plain '-Pkotlin.compiler.execution.strategy=in-process'
 ```
 
-- BUILD SUCCESSFUL。43 项 JVM 测试，无失败/错误/跳过；Lint 0 errors、5 warnings（依赖更新及原有资源提示）。
+- BUILD SUCCESSFUL。46 项 JVM 测试，无失败/错误/跳过；Lint 0 errors、5 warnings（依赖更新及原有资源提示）。
 - 测试覆盖等分双方变为 2010/1990、切换与临时记录隔离、三人级联更正/删除、撤销、重复请求、自我对局及不存在对手拒绝、初始分修改、旧备份升级、多棋手备份往返及错误关联/篡改分值拒绝。
-- 宿主 SQLite 执行生产 MIGRATION_1_2 SQL，旧分值与 revision 保留，新增列/default 与导出 v2 schema 对齐。v1 schema 原样保留。
+- 宿主 SQLite 执行生产 MIGRATION_1_2 与 MIGRATION_2_3 SQL，旧分值、revision 和狗榜表结构保留；v1/v2 备份 schema 原样读取。
 - 新增 Android Room 迁移/重开/回滚测试及添加棋手→已有对手记分→第二方历史 UI 测试，均编译通过。
 - 独立只读代码审查无必须修复问题；建议后续扩展第二方历史更正/删除 UI 测试。
 - adb 未连接设备；Android 设备测试未执行，实机视觉和交互仍未验收。
@@ -47,5 +48,5 @@ $env:GRADLE_USER_HOME = 'C:/Users/mxnkilmt/Documents/Codex/Projects/GO_ELO_Andro
 - versionName: 0.3.0；versionCode: 3
 - 沿用已安装 0.2.0 的原调试签名，可覆盖升级，无需卸载。
 - 证书 SHA256: cb0498ee1a305576d49e07e6c28b0ed55909771b2b4dd555b38dece107388efa
-- APK SHA256: E62405E96A85B8925184E89A4E0C81B6FE69C22D7DB2411B9AB87C3E90F25481
+- APK SHA256: E4C5C1B4B7FFB3291AD3735D57BF033B39F1B7E3F40152F9F85387CA83715438
 - 调试签名路径通过 GOELO_DEBUG_KEYSTORE 配置，密钥未加入仓库。

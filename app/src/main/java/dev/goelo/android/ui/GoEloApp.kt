@@ -21,6 +21,7 @@ import dev.goelo.android.ui.onboarding.OnboardingScreen
 import dev.goelo.android.ui.record.RecordSheet
 import dev.goelo.android.ui.settings.SettingsScreen
 import dev.goelo.android.ui.backup.BackupSheet
+import dev.goelo.android.ui.doglist.DogListScreen
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -85,6 +86,14 @@ fun GoEloApp(viewModel: AppViewModel, onSave: () -> Unit = {}, onShare: () -> Un
                     onDelete = viewModel::deleteMatch,
                     onEditKnown = viewModel::editKnownMatch,
                 )
+                AppTab.DOG_LIST -> DogListScreen(
+                    ids = snapshot.state.dogIds,
+                    revision = snapshot.revision,
+                    busy = state.busy,
+                    error = state.error,
+                    onAdd = { id, _ -> viewModel.addDogId(id) },
+                    onRemove = viewModel::removeDogId,
+                )
                 AppTab.SETTINGS -> SettingsScreen(
                     state = personal,
                     revision = snapshot.revision,
@@ -118,6 +127,7 @@ fun GoEloApp(viewModel: AppViewModel, onSave: () -> Unit = {}, onShare: () -> Un
                 AppTab.GROWTH to "成长",
                 AppTab.ANALYSIS to "分析",
                 AppTab.HISTORY to "历史",
+                AppTab.DOG_LIST to "狗榜",
                 AppTab.SETTINGS to "我的",
             ).forEach { (tab, label) ->
                 NavigationBarItem(
@@ -127,6 +137,7 @@ fun GoEloApp(viewModel: AppViewModel, onSave: () -> Unit = {}, onShare: () -> Un
                         AppTab.GROWTH -> Mark.GROWTH
                         AppTab.ANALYSIS -> Mark.ANALYSIS
                         AppTab.HISTORY -> Mark.HISTORY
+                        AppTab.DOG_LIST -> Mark.STONE
                         AppTab.SETTINGS -> Mark.PROFILE
                     }, color = if(state.tab == tab) Gold else MaterialTheme.colorScheme.onSurfaceVariant) },
                     label = { Text(label) },

@@ -4,7 +4,7 @@ import dev.goelo.android.data.StoreSnapshot
 import dev.goelo.android.data.UndoToken
 import dev.goelo.android.stats.HistoryRange
 
-enum class AppTab { GROWTH, ANALYSIS, HISTORY, SETTINGS }
+enum class AppTab { GROWTH, ANALYSIS, HISTORY, DOG_LIST, SETTINGS }
 
 data class AppUiState(
     val snapshot: StoreSnapshot? = null,

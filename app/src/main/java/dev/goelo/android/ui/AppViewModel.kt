@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.goelo.android.data.MatchService
 import dev.goelo.android.data.ProfileService
+import dev.goelo.android.data.DogListService
 import dev.goelo.android.data.StateStore
 import dev.goelo.android.model.Outcome
 import dev.goelo.android.rating.parseRecord
@@ -29,6 +30,7 @@ class AppViewModel(
     private val newId: () -> String,
     private val codec: BackupCodec? = null,
     private val restoreService: RestoreService? = null,
+    private val dogList: DogListService? = null,
 ) : ViewModel() {
     private val mutableUi = MutableStateFlow(AppUiState())
     val ui: StateFlow<AppUiState> = mutableUi.asStateFlow()
@@ -196,6 +198,17 @@ class AppViewModel(
     fun setTarget(value: Double?, revision: Long) = mutate {
         profiles.setTarget(value, revision)
         null
+    }
+
+    fun addDogId(id: String) {
+        val snapshot = mutableUi.value.snapshot ?: return
+        val service = dogList ?: return
+        mutate { service.add(id, snapshot.revision); null }
+    }
+
+    fun removeDogId(id: String, revision: Long) {
+        val service = dogList ?: return
+        mutate { service.remove(id, revision); null }
     }
 
     private fun mutate(onSuccess: (UndoToken?) -> Unit = {}, block: suspend () -> UndoToken?) {

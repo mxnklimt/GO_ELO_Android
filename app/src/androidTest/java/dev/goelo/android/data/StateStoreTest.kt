@@ -79,4 +79,16 @@ class StateStoreTest {
             context.deleteDatabase(name)
         }
     }
+
+    @Test fun dogIdsSurviveRoomReopen() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val name = "dog-list-${UUID.randomUUID()}.db"
+        val first = RoomStateStore(Room.databaseBuilder(context, GoEloDatabase::class.java, name).allowMainThreadQueries().build())
+        try {
+            first.update(0) { AppState(Profile(name = "棋手", initialElo = 2200.0), emptyList(), dogIds = listOf("AlphaFox", "Beta")) }
+        } finally { first.close() }
+        val reopened = RoomStateStore(Room.databaseBuilder(context, GoEloDatabase::class.java, name).allowMainThreadQueries().build())
+        try { assertEquals(listOf("AlphaFox", "Beta"), reopened.read().state.dogIds) }
+        finally { reopened.close(); context.deleteDatabase(name) }
+    }
 }
