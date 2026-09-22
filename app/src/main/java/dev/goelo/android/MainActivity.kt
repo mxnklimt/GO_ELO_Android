@@ -61,6 +61,7 @@ private class AppViewModelFactory(private val container: AppContainer) : ViewMod
             newId = { UUID.randomUUID().toString() },
             codec = container.backupCodec,
             restoreService = container.restoreService,
+            dogList = container.dogListService,
         ) as T
     }
 }

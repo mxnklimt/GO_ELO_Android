@@ -29,7 +29,7 @@ class MultiPlayerMigrationTest {
             db.version = 1
         }
         fun open() = RoomStateStore(Room.databaseBuilder(context, GoEloDatabase::class.java, name)
-            .addMigrations(GoEloDatabase.MIGRATION_1_2).allowMainThreadQueries().build())
+            .addMigrations(GoEloDatabase.MIGRATION_1_2, GoEloDatabase.MIGRATION_2_3).allowMainThreadQueries().build())
         val migrated = open()
         try {
             val old = migrated.read()

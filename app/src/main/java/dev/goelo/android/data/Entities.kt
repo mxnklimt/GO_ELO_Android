@@ -50,6 +50,9 @@ data class MatchEntity(
 data class MetaEntity(@PrimaryKey val id: Int = 0, val revision: Long,
     @ColumnInfo(defaultValue = "'local'") val activePlayerId: String = "local")
 
+@Entity(tableName = "dog_ids")
+data class DogIdEntity(@PrimaryKey val id: String)
+
 private val entityJson = Json { encodeDefaults = true; ignoreUnknownKeys = false }
 
 fun ProfileEntity.toModel() = Profile(id, name, initialElo, targetElo, targetStartElo, lastOpponentRank)

@@ -19,6 +19,7 @@ import kotlinx.serialization.Transient
 )
 @Serializable data class AppState(
     val profile: Profile?, val matches: List<Match>, val otherProfiles: List<Profile> = emptyList(),
+    val dogIds: List<String> = emptyList(),
 ) {
     val allProfiles: List<Profile> get() = listOfNotNull(profile) + otherProfiles
 }
