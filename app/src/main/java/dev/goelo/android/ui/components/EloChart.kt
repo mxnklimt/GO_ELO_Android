@@ -2,19 +2,23 @@ package dev.goelo.android.ui.components
 
 import android.graphics.Paint as AndroidPaint
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.key.*
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import dev.goelo.android.model.Outcome
 import dev.goelo.android.stats.SeriesPoint
 import dev.goelo.android.ui.theme.*
 import java.util.Locale
@@ -22,6 +26,28 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 private val LossMarker = Color(0xFF8FAE9F)
+
+private fun DrawScope.drawChartMarker(point: SeriesPoint, center: Offset, selected: Boolean = false) {
+    if (selected) drawCircle(Gold.copy(alpha = .16f), 9.dp.toPx(), center)
+    when (chartMarkerShape(point.outcome)) {
+        ChartMarkerShape.CIRCLE -> {
+            drawCircle(Ink, if (selected) 4.8.dp.toPx() else 4.5.dp.toPx(), center)
+            drawCircle(if (point.outcome == null) MutedGold else Gold,
+                if (selected) 3.2.dp.toPx() else 3.dp.toPx(), center)
+        }
+        ChartMarkerShape.DIAMOND -> {
+            val radius = if (selected) 5.dp.toPx() else 4.dp.toPx()
+            val diamond = Path().apply {
+                moveTo(center.x, center.y - radius)
+                lineTo(center.x + radius, center.y)
+                lineTo(center.x, center.y + radius)
+                lineTo(center.x - radius, center.y)
+                close()
+            }
+            drawPath(diamond, LossMarker)
+        }
+    }
+}
 
 fun nearestPointIndex(x: Float, width: Float, count: Int): Int? {
     if (count == 0 || width <= 0f) return null
@@ -32,12 +58,20 @@ fun nearestPointIndex(x: Float, width: Float, count: Int): Int? {
 @Composable
 fun EloChart(points: List<SeriesPoint>, modifier: Modifier = Modifier) {
     var selected by remember(points) { mutableStateOf(points.lastIndex.takeIf { it >= 0 }) }
+    var chartFocused by remember { mutableStateOf(false) }
     val scale = remember(points) { chartScale(points) }
     val markerIndices = remember(points) { visibleMarkerIndices(points.size) }
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     val onSurface = MaterialTheme.colorScheme.onSurface
     val min = points.minOfOrNull { it.elo } ?: 0.0
     val max = points.maxOfOrNull { it.elo } ?: 0.0
+    val selectedDetail = selected?.let { index -> points.getOrNull(index)?.let(::chartPointDetail) }
+    fun moveSelection(direction: Int): Boolean {
+        val next = chartSelectionStep(selected, points.size, direction) ?: return false
+        if (next == selected) return false
+        selected = next
+        return true
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -49,7 +83,18 @@ fun EloChart(points: List<SeriesPoint>, modifier: Modifier = Modifier) {
         }
         Canvas(modifier.semantics {
             contentDescription = "棋力走势，最低 ${eloText(min)}，最高 ${eloText(max)}。点选查看单盘结果"
-        }.pointerInput(points) {
+            stateDescription = selectedDetail ?: "暂无记录"
+            customActions = listOf(
+                CustomAccessibilityAction("上一盘") { moveSelection(-1) },
+                CustomAccessibilityAction("下一盘") { moveSelection(1) },
+            )
+        }.onKeyEvent { event ->
+            if (event.type != KeyEventType.KeyDown) false else when (event.key) {
+                Key.DirectionLeft -> moveSelection(-1)
+                Key.DirectionRight -> moveSelection(1)
+                else -> false
+            }
+        }.onFocusChanged { chartFocused = it.isFocused }.focusable().pointerInput(points) {
             detectTapGestures { offset ->
                 val left = 43.dp.toPx()
                 val right = 10.dp.toPx()
@@ -107,40 +152,22 @@ fun EloChart(points: List<SeriesPoint>, modifier: Modifier = Modifier) {
             drawCircle(muted, 2.5.dp.toPx(), Offset(x(0), y(points[0].elo)))
             markerIndices.forEach { index ->
                 val point = points[index]
-                val center = Offset(x(index), y(point.elo))
-                when (point.outcome) {
-                    Outcome.WIN -> {
-                        drawCircle(Ink, 4.5.dp.toPx(), center)
-                        drawCircle(Gold, 3.dp.toPx(), center)
-                    }
-                    Outcome.LOSS -> {
-                        val radius = 4.dp.toPx()
-                        val diamond = Path().apply {
-                            moveTo(center.x, center.y - radius)
-                            lineTo(center.x + radius, center.y)
-                            lineTo(center.x, center.y + radius)
-                            lineTo(center.x - radius, center.y)
-                            close()
-                        }
-                        drawPath(diamond, LossMarker)
-                    }
-                    null -> Unit
-                }
+                drawChartMarker(point, Offset(x(index), y(point.elo)))
             }
             selected?.let { index ->
                 points.getOrNull(index)?.let { point ->
                     val center = Offset(x(index), y(point.elo))
                     drawLine(Gold.copy(alpha = .23f), Offset(center.x, top), Offset(center.x, bottom),
                         strokeWidth = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 4.dp.toPx())))
-                    drawCircle(Gold.copy(alpha = .16f), 9.dp.toPx(), center)
-                    drawCircle(Ink, 4.8.dp.toPx(), center)
-                    drawCircle(if (point.outcome == Outcome.LOSS) LossMarker else Gold, 3.2.dp.toPx(), center)
+                    drawChartMarker(point, center, selected = true)
                 }
             }
             val last = points.last()
             val lastY = y(last.elo)
             val labelY = if (lastY < top + 19.dp.toPx()) lastY + 18.dp.toPx() else lastY - 8.dp.toPx()
             label(eloText(last.elo), right - 2.dp.toPx(), labelY, onSurface, AndroidPaint.Align.RIGHT)
+            if (chartFocused) drawRoundRect(Gold.copy(alpha = .7f), cornerRadius = CornerRadius(9.dp.toPx()),
+                style = Stroke(1.3.dp.toPx()))
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(points.firstOrNull()?.let { if (it.matchId == null) "区间起点" else "第 ${it.order} 盘" } ?: "暂无记录",
@@ -148,12 +175,8 @@ fun EloChart(points: List<SeriesPoint>, modifier: Modifier = Modifier) {
             Text(points.lastOrNull()?.let { if (it.matchId == null) "当前" else "当前 · 第 ${it.order} 盘" } ?: "",
                 style = MaterialTheme.typography.labelSmall, color = muted)
         }
-        selected?.let { index -> points.getOrNull(index)?.let { point ->
-            val detail = if (point.matchId == null) "区间起点 · ${eloText(point.elo)} ELO" else {
-                val outcome = if (point.outcome == Outcome.WIN) "胜" else "负"
-                "第 ${point.order} 盘 · $outcome · ${eloText(point.elo)} ELO · ${deltaText(point.delta ?: 0.0)}"
-            }
-            Text(detail, style = MaterialTheme.typography.labelMedium, color = Gold, modifier = Modifier.padding(top = 5.dp))
-        } }
+        selectedDetail?.let {
+            Text(it, style = MaterialTheme.typography.labelMedium, color = Gold, modifier = Modifier.padding(top = 5.dp))
+        }
     }
 }

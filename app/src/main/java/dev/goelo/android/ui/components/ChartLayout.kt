@@ -1,6 +1,7 @@
 package dev.goelo.android.ui.components
 
 import dev.goelo.android.rating.rankBaseline
+import dev.goelo.android.model.Outcome
 import dev.goelo.android.stats.SeriesPoint
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -10,6 +11,22 @@ import kotlin.math.pow
 
 data class RankEntry(val rank: Int, val elo: Double)
 data class ChartScale(val lower: Double, val upper: Double, val ticks: List<Double>, val rankEntries: List<RankEntry>)
+enum class ChartMarkerShape { CIRCLE, DIAMOND }
+
+fun chartMarkerShape(outcome: Outcome?): ChartMarkerShape =
+    if (outcome == Outcome.LOSS) ChartMarkerShape.DIAMOND else ChartMarkerShape.CIRCLE
+
+fun chartSelectionStep(current: Int?, pointCount: Int, direction: Int): Int? {
+    if (pointCount <= 0) return null
+    return ((current ?: pointCount - 1) + direction).coerceIn(0, pointCount - 1)
+}
+
+fun chartPointDetail(point: SeriesPoint): String = if (point.matchId == null) {
+    "区间起点 · ${eloText(point.elo)} ELO"
+} else {
+    val outcome = if (point.outcome == Outcome.WIN) "胜" else "负"
+    "第 ${point.order} 盘 · $outcome · ${eloText(point.elo)} ELO · ${deltaText(point.delta ?: 0.0)}"
+}
 
 fun chartScale(points: List<SeriesPoint>): ChartScale {
     val min = points.minOfOrNull { it.elo } ?: 0.0

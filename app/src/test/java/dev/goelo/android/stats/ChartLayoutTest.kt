@@ -3,6 +3,11 @@ package dev.goelo.android.stats
 import dev.goelo.android.ui.components.nearestPointIndex
 import dev.goelo.android.ui.components.chartScale
 import dev.goelo.android.ui.components.visibleMarkerIndices
+import dev.goelo.android.ui.components.chartMarkerShape
+import dev.goelo.android.ui.components.ChartMarkerShape
+import dev.goelo.android.ui.components.chartSelectionStep
+import dev.goelo.android.ui.components.chartPointDetail
+import dev.goelo.android.model.Outcome
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -34,5 +39,24 @@ class ChartLayoutTest {
         assertTrue(dense.size < 21)
         assertFalse(dense.contains(0))
         assertEquals(100, dense.last())
+    }
+
+    @Test fun `selectedLossKeepsDiamondMarker`() {
+        assertEquals(ChartMarkerShape.DIAMOND, chartMarkerShape(Outcome.LOSS))
+        assertEquals(ChartMarkerShape.CIRCLE, chartMarkerShape(Outcome.WIN))
+    }
+
+    @Test fun `accessiblePointNavigationStopsAtBothEnds`() {
+        assertEquals(2, chartSelectionStep(3, 4, -1))
+        assertEquals(0, chartSelectionStep(0, 4, -1))
+        assertEquals(3, chartSelectionStep(3, 4, 1))
+        assertNull(chartSelectionStep(null, 0, 1))
+    }
+
+    @Test fun `selectedResultDescriptionIncludesOutcomeScoreAndChange`() {
+        val detail = chartPointDetail(SeriesPoint(8, 2204.0, "m8", Outcome.LOSS, -8.0))
+        assertTrue(detail.contains("负"))
+        assertTrue(detail.contains("2204.0 ELO"))
+        assertTrue(detail.contains("-8.0"))
     }
 }

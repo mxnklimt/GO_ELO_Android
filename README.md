@@ -101,7 +101,7 @@
 
 当前验证结果：
 
-- 51 项 JVM 单元测试通过。
+- 54 项 JVM 单元测试通过。
 - Android Debug 构建通过。
 - Lint：0 errors。
 - Android 测试源码编译通过。
