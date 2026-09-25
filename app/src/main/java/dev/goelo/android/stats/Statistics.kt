@@ -6,7 +6,10 @@ import java.time.YearMonth
 import java.time.ZoneId
 
 enum class HistoryRange(val count: Int?) { LAST20(20), LAST50(50), LAST100(100), ALL(null) }
-data class SeriesPoint(val order: Long, val elo: Double, val matchId: String?)
+data class SeriesPoint(
+    val order: Long, val elo: Double, val matchId: String?,
+    val outcome: Outcome? = null, val delta: Double? = null,
+)
 data class Summary(val games: Int, val wins: Int, val winRate: Double?, val netDelta: Double,
     val currentStreak: Int, val longestStreak: Int, val peak: Double)
 data class RankStat(val rank: Int, val games: Int, val wins: Int)
@@ -35,7 +38,7 @@ fun series(state: AppState, range: HistoryRange): List<SeriesPoint> {
     val selected = state.selected(range)
     if (selected.isEmpty()) return if (state.profile == null) emptyList() else listOf(SeriesPoint(0, state.profile.initialElo, null))
     return listOf(SeriesPoint(selected.first().order - 1, selected.first().eloBefore, null)) +
-        selected.map { SeriesPoint(it.order, it.eloAfter, it.id) }
+        selected.map { SeriesPoint(it.order, it.eloAfter, it.id, it.outcome, it.delta) }
 }
 
 fun byRank(matches: List<Match>): List<RankStat> = matches.filter { it.kind == MatchKind.NATIVE && it.input != null }
