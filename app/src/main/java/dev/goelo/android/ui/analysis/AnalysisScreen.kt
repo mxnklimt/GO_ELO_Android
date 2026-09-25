@@ -28,7 +28,7 @@ import java.util.Locale
     val currentPlayerId = requireNotNull(personal.profile).id
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement=Arrangement.spacedBy(20.dp)) {
-        PageHeading("看见你的进步","ANALYSIS  /  棋力分析")
+        PageHeading("对局分析","ANALYSIS  /  棋力分析")
         RangeTabs(range,onRange)
         PanelCard {
             SectionTitle("本区间表现","${summary.games} 盘")

@@ -20,6 +20,20 @@ class StatisticsTest {
         assertEquals(20, summarize(s, HistoryRange.LAST20).games)
         assertEquals(22, series(s, HistoryRange.ALL).size); assertNull(series(s, HistoryRange.ALL).first().matchId)
     }
+    @Test fun seriesCarriesMatchResultAndChangeForChartSelection() {
+        val original = state(Outcome.WIN, Outcome.LOSS)
+        val matches = listOf(
+            original.matches[0].copy(eloBefore = 2200.0, delta = 12.0, eloAfter = 2212.0),
+            original.matches[1].copy(eloBefore = 2212.0, delta = -8.0, eloAfter = 2204.0),
+        )
+        val points = series(original.copy(matches = matches), HistoryRange.ALL)
+        assertNull(points.first().outcome)
+        assertNull(points.first().delta)
+        assertEquals(Outcome.WIN, points[1].outcome)
+        assertEquals(12.0, points[1].delta!!, 0.0)
+        assertEquals(Outcome.LOSS, points[2].outcome)
+        assertEquals(-8.0, points[2].delta!!, 0.0)
+    }
     @Test fun unknownMonthIsExcludedAndRankGroupsNativeOnly() {
         val ms = state(Outcome.WIN).matches + Match("old", 2, MatchKind.LEGACY, null, null, Outcome.LOSS, null, null, 2000.0, 0.0, 2000.0, "legacy")
         assertEquals(1, byMonth(ms).single().games); assertEquals(1, byRank(ms).single().wins)

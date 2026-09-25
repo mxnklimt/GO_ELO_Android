@@ -22,7 +22,7 @@ fun GrowthScreen(state: AppState, range: HistoryRange, onRange: (HistoryRange) -
     val summary=summarize(state,range)
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement=Arrangement.spacedBy(20.dp)) {
-        PageHeading("每一盘，向上。","GO ELO  /  个人棋力成长") {
+        PageHeading("棋力档案","GO ELO  /  个人棋力成长") {
             FilledTonalIconButton(onClick=onBackup,modifier=Modifier.semantics { contentDescription="备份" }) {
                 AppMark(Mark.BACKUP)
             }
