@@ -87,7 +87,7 @@ class AppViewModel(
         viewModelScope.launch {
             mutableUi.value = mutableUi.value.copy(busy = true, error = null)
             try {
-                exportBytes = c.encode(BackupEnvelope(exportedAtEpochMs = clock.millis(), appVersion = "0.3.0", state = current.state))
+                exportBytes = c.encode(BackupEnvelope(exportedAtEpochMs = clock.millis(), appVersion = "0.3.2", state = current.state))
                 mutableUi.value = mutableUi.value.copy(pendingExport = true)
                 onReady?.invoke()
             } catch (e: Throwable) { mutableUi.value = mutableUi.value.copy(error = e.message ?: "备份失败") }
@@ -182,6 +182,11 @@ class AppViewModel(
     }
     fun editKnownMatch(id: String, outcome: Outcome, revision: Long) = mutate {
         matches.editKnown(id, outcome, revision)
+        null
+    }
+
+    fun convertTemporaryMatch(id: String, opponentId: String, outcome: Outcome, revision: Long) = mutate {
+        matches.convertTemporaryToKnown(id, opponentId, outcome, revision)
         null
     }
 

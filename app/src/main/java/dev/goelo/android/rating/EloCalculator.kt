@@ -7,6 +7,7 @@ import kotlin.math.pow
 const val TEMPORARY_ELO_RULE_V1 = "elo-v1"
 const val TEMPORARY_ELO_RULE_V2 = "elo-v2"
 const val TEMPORARY_ELO_RULE_V3 = "elo-v3"
+const val TEMPORARY_ELO_RULE_V4 = "elo-v4"
 
 /** Current reference table: 1d = 1100, each additional dan adds 200. */
 fun rankBaseline(rank: Int): Double {
@@ -15,7 +16,7 @@ fun rankBaseline(rank: Int): Double {
 }
 
 /** Estimates a temporary opponent using the current correction rule. */
-fun opponentElo(input: RecordInput): Double = opponentElo(input, TEMPORARY_ELO_RULE_V3)
+fun opponentElo(input: RecordInput): Double = opponentElo(input, TEMPORARY_ELO_RULE_V4)
 
 /** Replays a temporary opponent estimate with the rule stored on the match. */
 fun opponentElo(input: RecordInput, ruleVersion: String): Double {
@@ -26,13 +27,19 @@ fun opponentElo(input: RecordInput, ruleVersion: String): Double {
         TEMPORARY_ELO_RULE_V1 -> 400.0
         TEMPORARY_ELO_RULE_V2 -> 100.0
         TEMPORARY_ELO_RULE_V3 -> 100.0
+        TEMPORARY_ELO_RULE_V4 -> 100.0
         else -> error("未知的临时对手估分规则")
     }
-    val base = if (ruleVersion == TEMPORARY_ELO_RULE_V3) rankBaseline(input.rank)
+    val base = if (ruleVersion == TEMPORARY_ELO_RULE_V3 || ruleVersion == TEMPORARY_ELO_RULE_V4) rankBaseline(input.rank)
     else 1000.0 + 200.0 * (input.rank - 1)
     val correction = when {
         input.wins == 0 && input.losses == 0 -> 0.0
         input.losses == 0 -> 600.0
+        input.wins == 0 && ruleVersion == TEMPORARY_ELO_RULE_V4 -> {
+            // Choose the win rate whose probability of n consecutive losses is 50%.
+            val p = 1.0 - 0.5.pow(1.0 / input.losses)
+            coefficient * log10(p / (1.0 - p))
+        }
         input.wins == 0 -> -600.0
         else -> coefficient * log10(input.wins.toDouble() / input.losses)
     }

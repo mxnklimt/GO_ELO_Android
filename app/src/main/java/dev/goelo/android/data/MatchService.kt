@@ -1,7 +1,7 @@
 package dev.goelo.android.data
 
 import dev.goelo.android.model.*
-import dev.goelo.android.rating.TEMPORARY_ELO_RULE_V3
+import dev.goelo.android.rating.TEMPORARY_ELO_RULE_V4
 import dev.goelo.android.rating.opponentElo
 import dev.goelo.android.rating.replayState
 
@@ -36,7 +36,7 @@ class MatchService(private val store: StateStore) {
             val saved = store.update(before.revision) { state ->
                 val seed = Match(id, (state.matches.maxOfOrNull { it.order } ?: 0) + 1,
                     MatchKind.NATIVE, at, zoneId, outcome, input, null, 0.0, 0.0, 0.0,
-                    if (opponentId == null) TEMPORARY_ELO_RULE_V3 else "elo-pair-v1",
+                    if (opponentId == null) TEMPORARY_ELO_RULE_V4 else "elo-pair-v1",
                     playerId = ownerId, opponentPlayerId = opponentId)
                 val ranked = if (input == null) state else state.updatePlayer(ownerId) { it.copy(lastOpponentRank = input.rank) }
                 rehydrated(ranked.copy(matches = state.matches + seed))
@@ -53,7 +53,7 @@ class MatchService(private val store: StateStore) {
             val old = editable(state, id)
             require(old.opponentPlayerId == null && old.playerId == state.profile?.id) { "请使用已有棋手对局更正" }
             rehydrated(state.copy(matches = state.matches.map {
-                if (it.id == id) it.copy(input = input, outcome = outcome, ruleVersion = TEMPORARY_ELO_RULE_V3) else it
+                if (it.id == id) it.copy(input = input, outcome = outcome, ruleVersion = TEMPORARY_ELO_RULE_V4) else it
             }))
         }
 
@@ -64,6 +64,18 @@ class MatchService(private val store: StateStore) {
             val canonicalOutcome = if (state.profile?.id == old.playerId) outcome else outcome.opposite()
             rehydrated(state.copy(matches = state.matches.map { if (it.id == id) it.copy(outcome = canonicalOutcome) else it }))
         }
+
+    suspend fun convertTemporaryToKnown(id: String, opponentId: String, outcome: Outcome,
+        expectedRevision: Long): StoreSnapshot = store.update(expectedRevision) { state ->
+        val old = editable(state, id)
+        require(old.opponentPlayerId == null && old.playerId == state.profile?.id) { "不是当前棋手的临时对手对局" }
+        require(opponentId != old.playerId) { "不能与自己对局" }
+        require(state.allProfiles.any { it.id == opponentId }) { "未找到对手" }
+        rehydrated(state.copy(matches = state.matches.map { match ->
+            if (match.id == id) match.copy(input = null, opponentPlayerId = opponentId,
+                outcome = outcome, ruleVersion = "elo-pair-v1") else match
+        }))
+    }
 
     suspend fun delete(id: String, expectedRevision: Long): StoreSnapshot = store.update(expectedRevision) { state ->
         editable(state, id)

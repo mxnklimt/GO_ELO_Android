@@ -22,7 +22,9 @@ class HistoryScreenTest {
         val legacy = Match("old", 3L, MatchKind.LEGACY, null, null, Outcome.LOSS,
             null, null, 1990.0, -10.0, 1980.0, "legacy-fixed-v1")
         compose.setContent { BlackGoldTheme {
-            HistoryScreen(listOf(temporary, known, legacy), 1L, false, null, { _, _, _, _ -> }, { _, _ -> })
+            HistoryScreen(listOf(temporary, known, legacy), listOf(Profile(name = "甲", initialElo = 2000.0),
+                Profile(id = "b", name = "Bob", initialElo = 2000.0)),
+                1L, false, null, { _, _, _, _ -> }, { _, _ -> })
         } }
         compose.onNodeWithText("筛选对局").performClick()
         compose.onNodeWithText("棋手库对局").performClick()

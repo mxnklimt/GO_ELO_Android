@@ -14,6 +14,7 @@ import dev.goelo.android.model.Match
 import dev.goelo.android.model.MatchKind
 import dev.goelo.android.model.Outcome
 import dev.goelo.android.model.RecordInput
+import dev.goelo.android.model.Profile
 import dev.goelo.android.stats.HistoryFilter
 import dev.goelo.android.stats.MatchScope
 import dev.goelo.android.stats.filterMatches
@@ -26,12 +27,14 @@ import dev.goelo.android.ui.components.*
 @Composable
 fun HistoryScreen(
     matches: List<Match>,
+    players: List<Profile>,
     revision: Long,
     busy: Boolean,
     error: String?,
     onEdit: (String, RecordInput, Outcome, Long) -> Unit,
     onDelete: (String, Long) -> Unit,
     onEditKnown: (String, Outcome, Long) -> Unit = { _, _, _ -> },
+    onConvert: (String, String, Outcome, Long) -> Unit = { _, _, _, _ -> },
 ) {
     var rank by remember { mutableStateOf<Int?>(null) }
     var outcome by remember { mutableStateOf<Outcome?>(null) }
@@ -46,6 +49,8 @@ fun HistoryScreen(
     var editRank by remember { mutableIntStateOf(7) }
     var editRecord by remember { mutableStateOf("") }
     var editOutcome by remember { mutableStateOf(Outcome.WIN) }
+    var editKnownMode by remember { mutableStateOf(false) }
+    var editOpponentId by remember { mutableStateOf<String?>(null) }
     val filter = HistoryFilter(rank, outcome, fromDate.ifBlank { null }, toDate.ifBlank { null }, undated, scope)
     val result = remember(matches, filter) { runCatching { filterMatches(matches, filter) } }
     val visible = result.getOrDefault(emptyList())
@@ -90,6 +95,8 @@ fun HistoryScreen(
                         editRank = match.input?.rank ?: 7
                         editRecord = match.input?.let { "${it.wins}-${it.losses}" } ?: ""
                         editOutcome = match.outcome
+                        editKnownMode = false
+                        editOpponentId = null
                     } else selected = match
                 })
             }
@@ -98,10 +105,17 @@ fun HistoryScreen(
     val open = selected
     if (open?.kind == MatchKind.NATIVE) EditMatchSheet(
         match = open, rank = editRank, record = editRecord, outcome = editOutcome,
+        candidates = players.filter { it.id != open.playerId },
+        useKnownOpponent = editKnownMode, selectedOpponentId = editOpponentId,
         affectedCount = matches.count { it.order > open.order }, busy = busy, error = error,
         onRank = { editRank = it }, onRecord = { editRecord = it }, onOutcome = { editOutcome = it },
+        onMode = { editKnownMode = it; editOpponentId = null }, onOpponent = { editOpponentId = it },
         onSave = {
             if(open.opponentPlayerId!=null) onEditKnown(open.id,editOutcome,selectedRevision)
+            else if(editKnownMode) {
+                val opponentId = editOpponentId ?: return@EditMatchSheet
+                onConvert(open.id, opponentId, editOutcome, selectedRevision)
+            }
             else {
                 val input = dev.goelo.android.rating.parseRecord(editRank, editRecord).getOrNull() ?: return@EditMatchSheet
                 onEdit(open.id, input, editOutcome, selectedRevision)

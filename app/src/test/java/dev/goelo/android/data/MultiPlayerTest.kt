@@ -2,6 +2,8 @@ package dev.goelo.android.data
 
 import dev.goelo.android.model.*
 import dev.goelo.android.rating.validateState
+import dev.goelo.android.rating.replayState
+import dev.goelo.android.rating.TEMPORARY_ELO_RULE_V3
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
@@ -29,6 +31,58 @@ class MultiPlayerTest {
     }
     private fun elo(s: AppState, id: String) = s.forPlayer(id).let {
         it.matches.maxByOrNull { m -> m.order }?.eloAfter ?: it.profile!!.initialElo
+    }
+
+    @Test fun convertingTemporaryMatchToKnownReplaysBothPlayersAndLaterGames() = runBlocking {
+        val store = setup()
+        val service = MatchService(store)
+        service.record("temp", RecordInput(4, 0, 8), Outcome.WIN, 1, "UTC")
+        service.recordKnown("later", "c", Outcome.WIN, 2, "UTC", "b")
+        val previous = store.read().state.matches.single { it.id == "temp" }
+
+        service.convertTemporaryToKnown("temp", "b", Outcome.WIN, store.read().revision)
+
+        val state = store.read().state
+        val converted = state.matches.single { it.id == "temp" }
+        assertEquals(previous.id, converted.id)
+        assertEquals(previous.order, converted.order)
+        assertEquals(previous.playedAtEpochMs, converted.playedAtEpochMs)
+        assertEquals("b", converted.opponentPlayerId)
+        assertNull(converted.input)
+        assertEquals(10.0, converted.delta, 1e-8)
+        assertEquals(1, state.forPlayer("local").matches.count { it.id == "temp" })
+        assertEquals(1, state.forPlayer("b").matches.count { it.id == "temp" })
+        assertEquals(1990.0, state.matches.single { it.id == "later" }.eloBefore, 1e-8)
+        assertEquals(6000.0, state.allProfiles.sumOf { elo(state, it.id) }, 1e-8)
+    }
+
+    @Test fun convertingTemporaryMatchRejectsInvalidTargetOrStaleRevisionWithoutMutation() = runBlocking {
+        val store = setup()
+        val service = MatchService(store)
+        service.record("temp", RecordInput(4, 0, 8), Outcome.LOSS, 1, "UTC")
+        val before = store.read()
+        for (target in listOf("local", "missing")) {
+            assertTrue(runCatching { service.convertTemporaryToKnown("temp", target, Outcome.LOSS, before.revision) }.isFailure)
+            assertEquals(before, store.read())
+        }
+        assertTrue(runCatching { service.convertTemporaryToKnown("temp", "b", Outcome.LOSS, before.revision - 1) }.isFailure)
+        assertEquals(before, store.read())
+    }
+
+    @Test fun oldTemporaryEstimateStaysUntilManuallyEdited() = runBlocking {
+        val old = Match("old", 1, MatchKind.NATIVE, 1, "UTC", Outcome.WIN,
+            RecordInput(4, 0, 8), null, 0.0, 0.0, 0.0, TEMPORARY_ELO_RULE_V3)
+        val store = MemoryLedger(replayState(AppState(Profile(name = "甲", initialElo = 2000.0), listOf(old))))
+        val service = MatchService(store)
+        val original = store.read().state.matches.single()
+        assertEquals(1100.0, original.opponentElo!!, 0.0)
+        service.record("new", RecordInput(4, 0, 8), Outcome.WIN, 2, "UTC")
+        val afterNewRecord = store.read().state.matches.associateBy { it.id }
+        assertEquals(1100.0, afterNewRecord.getValue("old").opponentElo!!, 0.0)
+        assertEquals(1595.66856854, afterNewRecord.getValue("new").opponentElo!!, 1e-8)
+        service.edit("old", RecordInput(4, 0, 8), Outcome.WIN, store.read().revision)
+        val edited = store.read().state.matches.single { it.id == "old" }
+        assertEquals(1595.66856854, edited.opponentElo!!, 1e-8)
     }
 
     @Test fun knownOpponentGetsOppositeDeltaAndOneSharedRecord() = runBlocking {

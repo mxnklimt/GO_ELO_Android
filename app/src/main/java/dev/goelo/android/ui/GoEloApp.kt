@@ -79,12 +79,14 @@ fun GoEloApp(viewModel: AppViewModel, onSave: () -> Unit = {}, onShare: () -> Un
                 AppTab.ANALYSIS -> AnalysisScreen(ledger = snapshot.state, personal = personal, range = state.range, onRange = viewModel::selectRange)
                 AppTab.HISTORY -> HistoryScreen(
                     matches = personal.matches,
+                    players = snapshot.state.allProfiles,
                     revision = snapshot.revision,
                     busy = state.busy,
                     error = state.error,
                     onEdit = viewModel::editMatch,
                     onDelete = viewModel::deleteMatch,
                     onEditKnown = viewModel::editKnownMatch,
+                    onConvert = viewModel::convertTemporaryMatch,
                 )
                 AppTab.DOG_LIST -> DogListScreen(
                     ids = snapshot.state.dogIds,

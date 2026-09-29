@@ -3,6 +3,18 @@ import dev.goelo.android.model.*
 import org.junit.Assert.*
 import org.junit.Test
 class EloCalculatorTest {
+ @Test fun zeroWinStreakUsesBinomialBoundaryWithoutChangingOldRule(){
+  val input=RecordInput(4,0,8)
+  assertEquals(1595.66856854,opponentElo(input),.00001)
+  assertEquals(1100.0,opponentElo(input,TEMPORARY_ELO_RULE_V3),0.0)
+  assertEquals(1700.0,opponentElo(RecordInput(4,0,1)),0.0)
+  assertEquals(1554.73429503,opponentElo(RecordInput(4,0,20)),.00001)
+ }
+ @Test fun nonzeroWinRecordsRetainExistingEstimates(){
+  assertEquals(2239.79400087,opponentElo(RecordInput(7,1,4)),.00001)
+  assertEquals(2313.830270,opponentElo(RecordInput(7,11,8)),.00001)
+  assertEquals(2900.0,opponentElo(RecordInput(7,8,0)),0.0)
+ }
  @Test fun knownRankSevenRecordUsesCurrentRankBaseline()=assertEquals(2313.830270,opponentElo(RecordInput(7,11,8)),.00001)
  @Test fun legacyRuleStillReproducesOldEstimate(){
   val input=RecordInput(7,11,8)
@@ -10,7 +22,7 @@ class EloCalculatorTest {
   assertEquals(2213.830270,opponentElo(input,TEMPORARY_ELO_RULE_V2),.00001)
   assertEquals(2313.830270,opponentElo(input,TEMPORARY_ELO_RULE_V3),.00001)
  }
- @Test fun endpointsAndRatio(){assertEquals(2900.0,opponentElo(RecordInput(7,1,0)),0.0);assertEquals(2900.0,opponentElo(RecordInput(7,20,0)),0.0);assertEquals(1700.0,opponentElo(RecordInput(7,0,20)),0.0);assertEquals(2300.0,opponentElo(RecordInput(7,0,0)),0.0);assertEquals(opponentElo(RecordInput(7,3,1)),opponentElo(RecordInput(7,15,5)),0.0)}
+ @Test fun endpointsAndRatio(){assertEquals(2900.0,opponentElo(RecordInput(7,1,0)),0.0);assertEquals(2900.0,opponentElo(RecordInput(7,20,0)),0.0);assertEquals(1700.0,opponentElo(RecordInput(7,0,20),TEMPORARY_ELO_RULE_V3),0.0);assertEquals(2300.0,opponentElo(RecordInput(7,0,0)),0.0);assertEquals(opponentElo(RecordInput(7,3,1)),opponentElo(RecordInput(7,15,5)),0.0)}
  @Test fun equalOpponentsMoveTenPoints(){assertEquals(2010.0,scoreChange(2000.0,2000.0,Outcome.WIN).after,0.0);assertEquals(1990.0,scoreChange(2000.0,2000.0,Outcome.LOSS).after,0.0)}
  @Test fun expectedWinProbabilityUsesExistingEloFormula(){
   assertEquals(0.5,winProbability(2000.0,2000.0),1e-12)
